@@ -619,19 +619,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Camera Elements
     const openCameraBtn = document.getElementById('open-camera-btn');
-    const cameraModal = document.getElementById('camera-modal');
-    const cameraFeed = document.getElementById('camera-feed');
-    const captureBtn = document.getElementById('capture-btn');
-    const closeCameraModal = document.getElementById('close-camera-modal');
-    const cameraCanvas = document.getElementById('camera-canvas');
     const capturedPhotoImg = document.getElementById('captured-photo-img');
     const photoPlaceholderText = document.getElementById('photo-placeholder-text');
     const retakePhotoBtn = document.getElementById('retake-photo-btn');
-    const switchCameraBtn = document.getElementById('switch-camera-btn');
-    const cameraZoomSlider = document.getElementById('camera-zoom-slider');
-    const cameraZoomVal = document.getElementById('camera-zoom-val');
-    const mirrorCameraBtn = document.getElementById('mirror-camera-btn');
-
+    
+    // In-memory canvas for native camera photo processing
+    const cameraCanvas = document.createElement('canvas');
     let usersData = JSON.parse(localStorage.getItem('cached_users') || '[]');
     let studentsData = [];
     let roomsData = [];
@@ -661,10 +654,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSlide = 0;
     let sliderInterval = null;
 
-    let cameraStream = null;
-    let currentFacingMode = 'environment';
-    let currentZoom = 1;
-    let isMirrored = false;
 
     // Helper untuk mengambil nilai dari berbagai kemungkinan nama kolom (Case Insensitive)
     function getVal(obj, possibleKeys) {
@@ -2572,300 +2561,109 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function updateCameraTransform() {
-        if (!cameraFeed) return;
-        let scaleX = currentZoom;
-        let scaleY = currentZoom;
-        if (isMirrored) {
-            scaleX = -currentZoom;
+    // Native Camera Setup
+    const nativeCameraInput = document.createElement('input');
+    nativeCameraInput.type = 'file';
+    nativeCameraInput.accept = 'image/*';
+    nativeCameraInput.capture = 'environment'; // Paksa akses kamera
+    nativeCameraInput.style.display = 'none';
+    document.body.appendChild(nativeCameraInput);
+
+    function openNativeCamera(target) {
+        currentCameraTarget = target;
+        // Gunakan kamera depan (user) untuk avatar, selain itu kamera belakang (environment)
+        if (target === 'avatar') {
+            nativeCameraInput.capture = 'user';
+        } else {
+            nativeCameraInput.capture = 'environment';
         }
-        cameraFeed.style.transform = `scale(${scaleX}, ${scaleY})`;
-        cameraFeed.style.transformOrigin = 'center center';
+        nativeCameraInput.click();
     }
 
-    async function startCamera() {
-        const activeScreen = document.querySelector('.screen.active');
-        if (!activeScreen) return;
+    nativeCameraInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-        // Check if browser supports mediaDevices
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            showAlert('📷 Kamera Gagal', 'Browser Anda tidak mendukung akses kamera atau Anda tidak menggunakan koneksi HTTPS.', 'error');
-            return;
-        }
+        // Reset input value agar dapat mengambil foto yang sama berulang kali jika diperlukan
+        e.target.value = '';
 
-        try {
-            if (cameraStream) stopCamera();
+        const img = new Image();
+        const reader = new FileReader();
 
-            // Set mirror mode default based on camera facing mode
-            isMirrored = (currentFacingMode === 'user');
+        reader.onload = (event) => {
+            img.onload = () => {
+                const MAX_WIDTH = 800;
+                let width = img.width;
+                let height = img.height;
 
-            // Reset zoom to 1x
-            currentZoom = 1;
-            if (cameraZoomSlider) {
-                cameraZoomSlider.value = 1;
-                cameraZoomVal.innerText = '1.0x';
-            }
-            updateCameraTransform();
+                if (width > MAX_WIDTH) {
+                    height = Math.round((height * MAX_WIDTH) / width);
+                    width = MAX_WIDTH;
+                }
 
-            let constraints = {
-                video: {
-                    facingMode: { ideal: currentFacingMode },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
+                cameraCanvas.width = width;
+                cameraCanvas.height = height;
+                const ctx = cameraCanvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Kompresi kualitas 60% dan resize max 800px
+                const photoData = cameraCanvas.toDataURL('image/jpeg', 0.6);
+
+                if (currentCameraTarget === 'journal') {
+                    capturedPhotoData = photoData;
+                    capturedPhotoImg.src = capturedPhotoData;
+                    capturedPhotoImg.style.display = 'block';
+                    photoPlaceholderText.style.display = 'none';
+                    if (retakePhotoBtn) retakePhotoBtn.style.display = 'block';
+                } else if (currentCameraTarget === 'literasi') {
+                    literasiCapturedPhotoData = photoData;
+                    literasiCapturedImg.src = literasiCapturedPhotoData;
+                    literasiCapturedImg.style.display = 'block';
+                    literasiPhotoPlaceholder.style.display = 'none';
+                    if (retakePhotoLiterasi) retakePhotoLiterasi.style.display = 'block';
+                } else if (currentCameraTarget === 'izin') {
+                    izinCapturedPhotoData = photoData;
+                    izinCapturedImg.src = izinCapturedPhotoData;
+                    izinCapturedImg.style.display = 'block';
+                    if (retakePhotoIzin) retakePhotoIzin.style.display = 'block';
+                } else if (currentCameraTarget === 'avatar') {
+                    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                    localStorage.setItem(`profile_photo_${userData.NIP || userData.KODEGURU}`, photoData);
+                    updateAllAvatars();
+                    showToast('✅ Foto profil diperbarui dari kamera.', 'success');
+
+                    // Sync to Google Sheets
+                    syncProfilePhoto(photoData);
                 }
             };
-
-            try {
-                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-            } catch (initialErr) {
-                console.warn('Initial camera constraints failed, trying fallback...', initialErr);
-                // Fallback: Just ask for any video
-                constraints = { video: true };
-                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-            }
-
-            cameraFeed.srcObject = cameraStream;
-
-            cameraModal.classList.remove('hidden');
-            setTimeout(() => {
-                cameraModal.classList.add('active');
-                cameraFeed.play().then(() => {
-                    initZoomCapabilities();
-                    updateCameraTransform();
-                }).catch(e => console.error("Play failed:", e));
-            }, 50);
-        } catch (err) {
-            console.error('Camera Error:', err);
-            let errorMsg = 'Tidak dapat mengakses kamera. Pastikan Anda memberikan izin akses kamera.';
-            if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-                errorMsg = 'Akses kamera hanya diperbolehkan melalui koneksi aman (HTTPS).';
-            }
-            showAlert('📷 Kamera Gagal', errorMsg, 'error');
-        }
-    }
-
-    function stopCamera() {
-        if (cameraStream) {
-            cameraStream.getTracks().forEach(track => track.stop());
-            cameraStream = null;
-        }
-        cameraModal.classList.remove('active');
-        setTimeout(() => cameraModal.classList.add('hidden'), 300);
-    }
-
-    function initZoomCapabilities() {
-        if (!cameraStream) return;
-        const track = cameraStream.getVideoTracks()[0];
-        if (track) {
-            const capabilities = typeof track.getCapabilities === 'function' ? track.getCapabilities() : {};
-            if (capabilities.zoom) {
-                cameraZoomSlider.min = capabilities.zoom.min || 1;
-                cameraZoomSlider.max = capabilities.zoom.max || 4;
-                cameraZoomSlider.step = capabilities.zoom.step || 0.1;
-                cameraZoomSlider.value = currentZoom;
-            } else {
-                cameraZoomSlider.min = 1;
-                cameraZoomSlider.max = 4;
-                cameraZoomSlider.step = 0.1;
-                cameraZoomSlider.value = currentZoom;
-            }
-        }
-    }
-
-    function applyZoom(zoomValue) {
-        if (!cameraStream) return;
-        const track = cameraStream.getVideoTracks()[0];
-        if (track) {
-            const capabilities = typeof track.getCapabilities === 'function' ? track.getCapabilities() : {};
-            if (capabilities.zoom) {
-                track.applyConstraints({
-                    advanced: [{ zoom: zoomValue }]
-                }).catch(err => {
-                    console.warn("Native zoom constraint failed, fallback to CSS scale:", err);
-                    updateCameraTransform();
-                });
-            } else {
-                updateCameraTransform();
-            }
-        }
-    }
-
-    async function switchCamera() {
-        if (!cameraStream) return;
-        currentFacingMode = (currentFacingMode === 'environment' ? 'user' : 'environment');
-        
-        // Auto-toggle mirror mode depending on the active camera mode
-        isMirrored = (currentFacingMode === 'user');
-
-        // Reset zoom
-        currentZoom = 1;
-        if (cameraZoomSlider) {
-            cameraZoomSlider.value = 1;
-            cameraZoomVal.innerText = '1.0x';
-        }
-        updateCameraTransform();
-
-        // Stop current tracks
-        cameraStream.getTracks().forEach(track => track.stop());
-        cameraStream = null;
-
-        let constraints = {
-            video: {
-                facingMode: { ideal: currentFacingMode },
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
-            }
+            img.src = event.target.result;
         };
-
-        try {
-            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-            cameraFeed.srcObject = cameraStream;
-            await cameraFeed.play();
-            initZoomCapabilities();
-            updateCameraTransform();
-        } catch (err) {
-            console.warn('Switch camera failed, trying fallback:', err);
-            try {
-                constraints = { video: { facingMode: currentFacingMode } };
-                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-                cameraFeed.srcObject = cameraStream;
-                await cameraFeed.play();
-                initZoomCapabilities();
-                updateCameraTransform();
-            } catch (fallbackErr) {
-                console.error('Switch camera fallback failed:', fallbackErr);
-                showToast('Kamera tidak tersedia.', 'error');
-            }
-        }
-    }
-
-    if (cameraZoomSlider) {
-        cameraZoomSlider.addEventListener('input', (e) => {
-            currentZoom = parseFloat(e.target.value);
-            if (cameraZoomVal) {
-                cameraZoomVal.innerText = currentZoom.toFixed(1) + 'x';
-            }
-            applyZoom(currentZoom);
-        });
-    }
-
-    if (switchCameraBtn) {
-        switchCameraBtn.addEventListener('click', switchCamera);
-    }
-
-    if (mirrorCameraBtn) {
-        mirrorCameraBtn.addEventListener('click', () => {
-            isMirrored = !isMirrored;
-            updateCameraTransform();
-            showToast(isMirrored ? 'Mode cermin aktif (Mirror ON)' : 'Mode cermin nonaktif (Mirror OFF)', 'info');
-        });
-    }
+        reader.readAsDataURL(file);
+    });
 
     if (openCameraBtn) {
         openCameraBtn.addEventListener('click', () => {
-            currentCameraTarget = 'journal';
-            startCamera();
+            openNativeCamera('journal');
         });
     }
 
     if (openCameraLiterasi) {
         openCameraLiterasi.addEventListener('click', () => {
-            currentCameraTarget = 'literasi';
-            startCamera();
+            openNativeCamera('literasi');
         });
     }
 
     if (retakePhotoLiterasi) {
         retakePhotoLiterasi.addEventListener('click', () => {
-            currentCameraTarget = 'literasi';
-            startCamera();
+            openNativeCamera('literasi');
         });
     }
 
-    closeCameraModal.addEventListener('click', stopCamera);
-    retakePhotoBtn.addEventListener('click', () => {
-        currentCameraTarget = 'journal';
-        startCamera();
-    });
-
-    captureBtn.addEventListener('click', () => {
-        const MAX_WIDTH = 800;
-        let width = cameraFeed.videoWidth;
-        let height = cameraFeed.videoHeight;
-
-        if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-        }
-
-        cameraCanvas.width = width;
-        cameraCanvas.height = height;
-        const ctx = cameraCanvas.getContext('2d');
-
-        // Apply mirroring to captured image if mode is mirrored
-        if (isMirrored) {
-            ctx.translate(width, 0);
-            ctx.scale(-1, 1);
-        }
-
-        // Check if native hardware zoom was used
-        let isHardwareZoom = false;
-        if (cameraStream) {
-            const track = cameraStream.getVideoTracks()[0];
-            if (track) {
-                const capabilities = typeof track.getCapabilities === 'function' ? track.getCapabilities() : {};
-                if (capabilities.zoom) {
-                    isHardwareZoom = true;
-                }
-            }
-        }
-
-        if (isHardwareZoom || currentZoom === 1) {
-            ctx.drawImage(cameraFeed, 0, 0, width, height);
-        } else {
-            // Digital zoom crop fallback
-            const sWidth = cameraFeed.videoWidth / currentZoom;
-            const sHeight = cameraFeed.videoHeight / currentZoom;
-            const sx = (cameraFeed.videoWidth - sWidth) / 2;
-            const sy = (cameraFeed.videoHeight - sHeight) / 2;
-            ctx.drawImage(cameraFeed, sx, sy, sWidth, sHeight, 0, 0, width, height);
-        }
-
-        // Reset context transform to prevent bugs in subsequent draws
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-        // Kompresi kualitas 60% dan resize max 800px
-        const photoData = cameraCanvas.toDataURL('image/jpeg', 0.6);
-
-        if (currentCameraTarget === 'journal') {
-            capturedPhotoData = photoData;
-            capturedPhotoImg.src = capturedPhotoData;
-            capturedPhotoImg.style.display = 'block';
-            photoPlaceholderText.style.display = 'none';
-            retakePhotoBtn.style.display = 'block';
-        } else if (currentCameraTarget === 'literasi') {
-            literasiCapturedPhotoData = photoData;
-            literasiCapturedImg.src = literasiCapturedPhotoData;
-            literasiCapturedImg.style.display = 'block';
-            literasiPhotoPlaceholder.style.display = 'none';
-            retakePhotoLiterasi.style.display = 'block';
-        } else if (currentCameraTarget === 'izin') {
-            izinCapturedPhotoData = photoData;
-            izinCapturedImg.src = izinCapturedPhotoData;
-            izinCapturedImg.style.display = 'block';
-            retakePhotoIzin.style.display = 'block';
-        } else if (currentCameraTarget === 'avatar') {
-            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-            localStorage.setItem(`profile_photo_${userData.NIP || userData.KODEGURU}`, photoData);
-            updateAllAvatars();
-            showToast('✅ Foto profil diperbarui dari kamera.', 'success');
-
-            // Sync to Google Sheets
-            syncProfilePhoto(photoData);
-        }
-
-        stopCamera();
-    });
+    if (retakePhotoBtn) {
+        retakePhotoBtn.addEventListener('click', () => {
+            openNativeCamera('journal');
+        });
+    }
 
     selectKelas.addEventListener('change', () => {
         const kelas = selectKelas.value;
