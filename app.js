@@ -1970,10 +1970,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnAvatarCamera) {
         btnAvatarCamera.addEventListener('click', () => {
-            currentCameraTarget = 'avatar';
             avatarPickerModal.classList.remove('active');
             setTimeout(() => avatarPickerModal.classList.add('hidden'), 300);
-            startCamera();
+            openNativeCamera('avatar');
         });
     }
 
@@ -2341,7 +2340,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     backFromJurnalForm.addEventListener('click', () => {
-        if (cameraStream) stopCamera();
+
         switchScreen('journal-form-screen', 'dashboard-screen');
     });
 
@@ -4334,7 +4333,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (backFromSiswaIzin) {
         backFromSiswaIzin.addEventListener('click', () => {
-            if (cameraStream) stopCamera();
+
             switchScreen('siswa-izin-screen', 'siswa-izin-list-screen');
         });
     }
@@ -4559,13 +4558,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     openCameraIzin?.addEventListener('click', () => {
-        currentCameraTarget = 'izin';
-        startCamera();
+        openNativeCamera('izin');
     });
 
     retakePhotoIzin?.addEventListener('click', () => {
-        currentCameraTarget = 'izin';
-        startCamera();
+        openNativeCamera('izin');
     });
 
     if (siswaIzinForm) {
