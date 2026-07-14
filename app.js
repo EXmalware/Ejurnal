@@ -627,6 +627,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const capturedPhotoImg = document.getElementById('captured-photo-img');
     const photoPlaceholderText = document.getElementById('photo-placeholder-text');
     const retakePhotoBtn = document.getElementById('retake-photo-btn');
+    const switchCameraBtn = document.getElementById('switch-camera-btn');
+    const cameraZoomSlider = document.getElementById('camera-zoom-slider');
+    const cameraZoomVal = document.getElementById('camera-zoom-val');
 
     let usersData = JSON.parse(localStorage.getItem('cached_users') || '[]');
     let studentsData = [];
@@ -658,6 +661,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let sliderInterval = null;
 
     let cameraStream = null;
+    let currentFacingMode = 'environment';
+    let currentZoom = 1;
 
     // Helper untuk mengambil nilai dari berbagai kemungkinan nama kolom (Case Insensitive)
     function getVal(obj, possibleKeys) {
@@ -2578,9 +2583,17 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             if (cameraStream) stopCamera();
 
+            // Reset zoom to 1x
+            currentZoom = 1;
+            if (cameraZoomSlider) {
+                cameraZoomSlider.value = 1;
+                cameraZoomVal.innerText = '1.0x';
+            }
+            cameraFeed.style.transform = 'none';
+
             let constraints = {
                 video: {
-                    facingMode: { ideal: 'environment' },
+                    facingMode: { ideal: currentFacingMode },
                     width: { ideal: 1280 },
                     height: { ideal: 720 }
                 }
@@ -2600,7 +2613,9 @@ document.addEventListener('DOMContentLoaded', () => {
             cameraModal.classList.remove('hidden');
             setTimeout(() => {
                 cameraModal.classList.add('active');
-                cameraFeed.play().catch(e => console.error("Play failed:", e));
+                cameraFeed.play().then(() => {
+                    initZoomCapabilities();
+                }).catch(e => console.error("Play failed:", e));
             }, 50);
         } catch (err) {
             console.error('Camera Error:', err);
@@ -2619,6 +2634,103 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         cameraModal.classList.remove('active');
         setTimeout(() => cameraModal.classList.add('hidden'), 300);
+    }
+
+    function initZoomCapabilities() {
+        if (!cameraStream) return;
+        const track = cameraStream.getVideoTracks()[0];
+        if (track) {
+            const capabilities = typeof track.getCapabilities === 'function' ? track.getCapabilities() : {};
+            if (capabilities.zoom) {
+                cameraZoomSlider.min = capabilities.zoom.min || 1;
+                cameraZoomSlider.max = capabilities.zoom.max || 4;
+                cameraZoomSlider.step = capabilities.zoom.step || 0.1;
+                cameraZoomSlider.value = currentZoom;
+            } else {
+                cameraZoomSlider.min = 1;
+                cameraZoomSlider.max = 4;
+                cameraZoomSlider.step = 0.1;
+                cameraZoomSlider.value = currentZoom;
+            }
+        }
+    }
+
+    function applyZoom(zoomValue) {
+        if (!cameraStream) return;
+        const track = cameraStream.getVideoTracks()[0];
+        if (track) {
+            const capabilities = typeof track.getCapabilities === 'function' ? track.getCapabilities() : {};
+            if (capabilities.zoom) {
+                track.applyConstraints({
+                    advanced: [{ zoom: zoomValue }]
+                }).catch(err => {
+                    console.warn("Native zoom constraint failed, fallback to CSS scale:", err);
+                    cameraFeed.style.transform = `scale(${zoomValue})`;
+                    cameraFeed.style.transformOrigin = 'center center';
+                });
+            } else {
+                cameraFeed.style.transform = `scale(${zoomValue})`;
+                cameraFeed.style.transformOrigin = 'center center';
+            }
+        }
+    }
+
+    async function switchCamera() {
+        if (!cameraStream) return;
+        currentFacingMode = (currentFacingMode === 'environment' ? 'user' : 'environment');
+        
+        // Reset zoom
+        currentZoom = 1;
+        if (cameraZoomSlider) {
+            cameraZoomSlider.value = 1;
+            cameraZoomVal.innerText = '1.0x';
+        }
+        cameraFeed.style.transform = 'none';
+
+        // Stop current tracks
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+
+        let constraints = {
+            video: {
+                facingMode: { ideal: currentFacingMode },
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        };
+
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            cameraFeed.srcObject = cameraStream;
+            await cameraFeed.play();
+            initZoomCapabilities();
+        } catch (err) {
+            console.warn('Switch camera failed, trying fallback:', err);
+            try {
+                constraints = { video: { facingMode: currentFacingMode } };
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                cameraFeed.srcObject = cameraStream;
+                await cameraFeed.play();
+                initZoomCapabilities();
+            } catch (fallbackErr) {
+                console.error('Switch camera fallback failed:', fallbackErr);
+                showToast('Kamera tidak tersedia.', 'error');
+            }
+        }
+    }
+
+    if (cameraZoomSlider) {
+        cameraZoomSlider.addEventListener('input', (e) => {
+            currentZoom = parseFloat(e.target.value);
+            if (cameraZoomVal) {
+                cameraZoomVal.innerText = currentZoom.toFixed(1) + 'x';
+            }
+            applyZoom(currentZoom);
+        });
+    }
+
+    if (switchCameraBtn) {
+        switchCameraBtn.addEventListener('click', switchCamera);
     }
 
     if (openCameraBtn) {
@@ -2661,7 +2773,29 @@ document.addEventListener('DOMContentLoaded', () => {
         cameraCanvas.width = width;
         cameraCanvas.height = height;
         const ctx = cameraCanvas.getContext('2d');
-        ctx.drawImage(cameraFeed, 0, 0, width, height);
+
+        // Check if native hardware zoom was used
+        let isHardwareZoom = false;
+        if (cameraStream) {
+            const track = cameraStream.getVideoTracks()[0];
+            if (track) {
+                const capabilities = typeof track.getCapabilities === 'function' ? track.getCapabilities() : {};
+                if (capabilities.zoom) {
+                    isHardwareZoom = true;
+                }
+            }
+        }
+
+        if (isHardwareZoom || currentZoom === 1) {
+            ctx.drawImage(cameraFeed, 0, 0, width, height);
+        } else {
+            // Digital zoom crop fallback
+            const sWidth = cameraFeed.videoWidth / currentZoom;
+            const sHeight = cameraFeed.videoHeight / currentZoom;
+            const sx = (cameraFeed.videoWidth - sWidth) / 2;
+            const sy = (cameraFeed.videoHeight - sHeight) / 2;
+            ctx.drawImage(cameraFeed, sx, sy, sWidth, sHeight, 0, 0, width, height);
+        }
 
         // Kompresi kualitas 60% dan resize max 800px
         const photoData = cameraCanvas.toDataURL('image/jpeg', 0.6);
@@ -4722,6 +4856,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         else if (cache.label === 'Literasi') payload.type = 'LITERASI';
                         else if (cache.label === 'Piket') payload.type = 'PIKET';
                         else if (cache.label === 'Siswa Izin') payload.type = 'SISWA_IZIN';
+                    }
+
+                    // Prepend single quote to JAM_KE to prevent Google Sheets from auto-converting to date
+                    if (cache.label === 'Jurnal' && payload.JAM_KE) {
+                        const jamStr = payload.JAM_KE.toString();
+                        if (!jamStr.startsWith("'")) {
+                            payload.JAM_KE = "'" + jamStr;
+                        }
                     }
 
                     await fetch(UPLOAD_API_URL, {
