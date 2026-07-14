@@ -630,6 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const switchCameraBtn = document.getElementById('switch-camera-btn');
     const cameraZoomSlider = document.getElementById('camera-zoom-slider');
     const cameraZoomVal = document.getElementById('camera-zoom-val');
+    const mirrorCameraBtn = document.getElementById('mirror-camera-btn');
 
     let usersData = JSON.parse(localStorage.getItem('cached_users') || '[]');
     let studentsData = [];
@@ -663,6 +664,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let cameraStream = null;
     let currentFacingMode = 'environment';
     let currentZoom = 1;
+    let isMirrored = false;
 
     // Helper untuk mengambil nilai dari berbagai kemungkinan nama kolom (Case Insensitive)
     function getVal(obj, possibleKeys) {
@@ -2570,6 +2572,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function updateCameraTransform() {
+        if (!cameraFeed) return;
+        let scaleX = currentZoom;
+        let scaleY = currentZoom;
+        if (isMirrored) {
+            scaleX = -currentZoom;
+        }
+        cameraFeed.style.transform = `scale(${scaleX}, ${scaleY})`;
+        cameraFeed.style.transformOrigin = 'center center';
+    }
+
     async function startCamera() {
         const activeScreen = document.querySelector('.screen.active');
         if (!activeScreen) return;
@@ -2583,13 +2596,16 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             if (cameraStream) stopCamera();
 
+            // Set mirror mode default based on camera facing mode
+            isMirrored = (currentFacingMode === 'user');
+
             // Reset zoom to 1x
             currentZoom = 1;
             if (cameraZoomSlider) {
                 cameraZoomSlider.value = 1;
                 cameraZoomVal.innerText = '1.0x';
             }
-            cameraFeed.style.transform = 'none';
+            updateCameraTransform();
 
             let constraints = {
                 video: {
@@ -2615,6 +2631,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cameraModal.classList.add('active');
                 cameraFeed.play().then(() => {
                     initZoomCapabilities();
+                    updateCameraTransform();
                 }).catch(e => console.error("Play failed:", e));
             }, 50);
         } catch (err) {
@@ -2665,12 +2682,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     advanced: [{ zoom: zoomValue }]
                 }).catch(err => {
                     console.warn("Native zoom constraint failed, fallback to CSS scale:", err);
-                    cameraFeed.style.transform = `scale(${zoomValue})`;
-                    cameraFeed.style.transformOrigin = 'center center';
+                    updateCameraTransform();
                 });
             } else {
-                cameraFeed.style.transform = `scale(${zoomValue})`;
-                cameraFeed.style.transformOrigin = 'center center';
+                updateCameraTransform();
             }
         }
     }
@@ -2679,13 +2694,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!cameraStream) return;
         currentFacingMode = (currentFacingMode === 'environment' ? 'user' : 'environment');
         
+        // Auto-toggle mirror mode depending on the active camera mode
+        isMirrored = (currentFacingMode === 'user');
+
         // Reset zoom
         currentZoom = 1;
         if (cameraZoomSlider) {
             cameraZoomSlider.value = 1;
             cameraZoomVal.innerText = '1.0x';
         }
-        cameraFeed.style.transform = 'none';
+        updateCameraTransform();
 
         // Stop current tracks
         cameraStream.getTracks().forEach(track => track.stop());
@@ -2704,6 +2722,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cameraFeed.srcObject = cameraStream;
             await cameraFeed.play();
             initZoomCapabilities();
+            updateCameraTransform();
         } catch (err) {
             console.warn('Switch camera failed, trying fallback:', err);
             try {
@@ -2712,6 +2731,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cameraFeed.srcObject = cameraStream;
                 await cameraFeed.play();
                 initZoomCapabilities();
+                updateCameraTransform();
             } catch (fallbackErr) {
                 console.error('Switch camera fallback failed:', fallbackErr);
                 showToast('Kamera tidak tersedia.', 'error');
@@ -2731,6 +2751,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (switchCameraBtn) {
         switchCameraBtn.addEventListener('click', switchCamera);
+    }
+
+    if (mirrorCameraBtn) {
+        mirrorCameraBtn.addEventListener('click', () => {
+            isMirrored = !isMirrored;
+            updateCameraTransform();
+            showToast(isMirrored ? 'Mode cermin aktif (Mirror ON)' : 'Mode cermin nonaktif (Mirror OFF)', 'info');
+        });
     }
 
     if (openCameraBtn) {
@@ -2774,6 +2802,12 @@ document.addEventListener('DOMContentLoaded', () => {
         cameraCanvas.height = height;
         const ctx = cameraCanvas.getContext('2d');
 
+        // Apply mirroring to captured image if mode is mirrored
+        if (isMirrored) {
+            ctx.translate(width, 0);
+            ctx.scale(-1, 1);
+        }
+
         // Check if native hardware zoom was used
         let isHardwareZoom = false;
         if (cameraStream) {
@@ -2796,6 +2830,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const sy = (cameraFeed.videoHeight - sHeight) / 2;
             ctx.drawImage(cameraFeed, sx, sy, sWidth, sHeight, 0, 0, width, height);
         }
+
+        // Reset context transform to prevent bugs in subsequent draws
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
 
         // Kompresi kualitas 60% dan resize max 800px
         const photoData = cameraCanvas.toDataURL('image/jpeg', 0.6);
