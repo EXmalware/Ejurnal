@@ -8,6 +8,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1e3a8a">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo.png">
     <title>E-Journal V 4.0.0</title>
     <link rel="icon" type="image/png" href="https://blogger.googleusercontent.com/img/a/AVvXsEj0gidDMAxs79SkpgBW6-nRy7SLq7ytNTzeXSLp8-sX5SKhlCY7JHDHr7BNvJ9nTF8YgHbB_kubuvfYzX4t4ONGFDfoL2-AMa8mgK29o6XGebiHkSMgiO2BoXpv0fATKQ9XMf-RPWGbqrr_KQ1iVX3JeWYh9JGXR43QSWxyIa2o-qeJR9S0_8dxANpck08">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -194,7 +196,7 @@
 
                 <div class="form-group">
                     <label for="izin-kelas">Kelas</label>
-                    <select id="izin-kelas" class="input-control" required>
+                    <select id="izin-kelas" class="input-control">
                         <option value="">Pilih Kelas...</option>
                         <!-- Filled by JS -->
                     </select>
@@ -202,7 +204,7 @@
 
                 <div class="form-group">
                     <label for="izin-siswa">Nama Siswa</label>
-                    <select id="izin-siswa" class="input-control" required disabled>
+                    <select id="izin-siswa" class="input-control" disabled>
                         <option value="">Pilih Siswa...</option>
                         <!-- Filled by JS -->
                     </select>
@@ -216,11 +218,19 @@
 
                 <div class="form-group">
                     <label for="izin-keterangan">Keterangan Izin</label>
-                    <select id="izin-keterangan" class="input-control" required>
+                    <select id="izin-keterangan" class="input-control">
                         <option value="">Pilih Keterangan...</option>
                         <option value="Sakit">Sakit</option>
                         <option value="Izin">Izin</option>
                     </select>
+                </div>
+
+                <div class="form-group">
+                    <button type="button" id="btn-add-siswa-izin" class="btn btn-outline" style="width: 100%; border-style: dashed; border-color: var(--primary); color: var(--primary); font-weight: 700;">➕ Tambah ke Daftar</button>
+                </div>
+
+                <div id="izin-students-cart" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+                    <!-- Filled by JS -->
                 </div>
 
                 <div class="form-group">

@@ -589,6 +589,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const openCameraIzin = document.getElementById('open-camera-izin');
     const izinCapturedImg = document.getElementById('izin-captured-img');
     const retakePhotoIzin = document.getElementById('retake-photo-izin');
+    const btnAddSiswaIzin = document.getElementById('btn-add-siswa-izin');
+    const izinStudentsCart = document.getElementById('izin-students-cart');
+    let currentIzinCart = [];
 
     const siswaIzinListScreen = document.getElementById('siswa-izin-list-screen');
     const siswaIzinListContainer = document.getElementById('siswa-izin-list-container');
@@ -4509,7 +4512,46 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSiswaIzinList();
     }
 
+    function renderIzinCart() {
+        if (!izinStudentsCart) return;
+        izinStudentsCart.innerHTML = '';
+        if (currentIzinCart.length === 0) {
+            izinStudentsCart.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem; border: 1px dashed var(--border); border-radius: var(--radius);">Belum ada siswa yang ditambahkan ke daftar.</div>';
+            return;
+        }
+
+        currentIzinCart.forEach((item, index) => {
+            const el = document.createElement('div');
+            el.style.display = 'flex';
+            el.style.justifyContent = 'space-between';
+            el.style.alignItems = 'center';
+            el.style.padding = '0.75rem';
+            el.style.background = 'var(--background)';
+            el.style.border = '1px solid var(--border)';
+            el.style.borderRadius = 'var(--radius)';
+            el.innerHTML = `
+                <div>
+                    <div style="font-weight: 700; font-size: 0.95rem; color: var(--text);">${item.NAMA_SISWA}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">${item.KELAS} | ${item.NIS} | <span style="font-weight: 600; color: var(--primary);">${item.KETERANGAN}</span></div>
+                </div>
+                <button type="button" class="btn-remove-cart-item" data-index="${index}" style="background: none; border: none; color: #ef4444; font-size: 1.25rem; cursor: pointer;">✖</button>
+            `;
+            izinStudentsCart.appendChild(el);
+        });
+
+        const removeBtns = izinStudentsCart.querySelectorAll('.btn-remove-cart-item');
+        removeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+                currentIzinCart.splice(idx, 1);
+                renderIzinCart();
+            });
+        });
+    }
+
     function initIzinForm() {
+        currentIzinCart = [];
+        renderIzinCart();
         siswaIzinForm.reset();
         izinCapturedPhotoData = null;
         izinCapturedImg.style.display = 'none';
@@ -4566,37 +4608,69 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (siswaIzinForm) {
-        siswaIzinForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            const submitBtn = siswaIzinForm.querySelector('button[type="submit"]');
+        btnAddSiswaIzin?.addEventListener('click', () => {
             const kelas = selectIzinKelas.value;
             const nama = selectIzinSiswa.value;
             const nis = inputIzinNIS.value;
             const keterangan = document.getElementById('izin-keterangan').value;
 
-            const now = new Date();
-            const days = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
-            const savedUser = JSON.parse(localStorage.getItem('userData') || '{}');
+            if (!kelas || !nama || !keterangan) {
+                showAlert('Peringatan', 'Harap isi Kelas, Nama Siswa, dan Keterangan Izin sebelum menambahkan ke daftar.', 'warning');
+                return;
+            }
 
-            const izinData = {
-                ID: Date.now(),
-                TANGGAL: now.toLocaleDateString('en-CA'),
-                HARI: days[now.getDay()],
+            if (currentIzinCart.some(item => item.NIS === nis)) {
+                showAlert('Peringatan', 'Siswa ini sudah ada di dalam daftar izin saat ini.', 'warning');
+                return;
+            }
+
+            currentIzinCart.push({
                 KELAS: kelas,
                 NAMA_SISWA: nama,
                 NIS: nis,
-                KETERANGAN: keterangan,
-                DOKUMENTASI_IZIN: izinCapturedPhotoData || '',
-                GURU_BK: savedUser.NAMA || 'Guru BK'
-            };
+                KETERANGAN: keterangan
+            });
+
+            renderIzinCart();
+
+            selectIzinSiswa.value = '';
+            inputIzinNIS.value = '';
+            document.getElementById('izin-keterangan').value = '';
+        });
+
+        siswaIzinForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            if (currentIzinCart.length === 0) {
+                showAlert('Peringatan', 'Daftar izin masih kosong. Silakan tambah siswa ke daftar terlebih dahulu.', 'warning');
+                return;
+            }
+
+            const submitBtn = siswaIzinForm.querySelector('button[type="submit"]');
+            const now = new Date();
+            const days = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
+            const savedUser = JSON.parse(localStorage.getItem('userData') || '{}');
 
             submitBtn.disabled = true;
             submitBtn.innerText = 'Menyimpan...';
 
             try {
                 const cached = JSON.parse(localStorage.getItem('cached_siswa_izin') || '[]');
-                cached.push(izinData);
+                
+                currentIzinCart.forEach((item, idx) => {
+                    cached.push({
+                        ID: Date.now() + idx,
+                        TANGGAL: now.toLocaleDateString('en-CA'),
+                        HARI: days[now.getDay()],
+                        KELAS: item.KELAS,
+                        NAMA_SISWA: item.NAMA_SISWA,
+                        NIS: item.NIS,
+                        KETERANGAN: item.KETERANGAN,
+                        DOKUMENTASI_IZIN: izinCapturedPhotoData || '',
+                        GURU_BK: savedUser.NAMA || 'Guru BK'
+                    });
+                });
+
                 localStorage.setItem('cached_siswa_izin', JSON.stringify(cached));
 
                 showToast('✅ Data Izin tersimpan.', 'success');
@@ -4604,6 +4678,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderSiswaIzinList();
                     switchScreen('siswa-izin-screen', 'siswa-izin-list-screen');
                     if (navigator.onLine) syncOfflineData();
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Simpan Data Izin';
                 }, 1500);
             } catch (err) {
                 console.error('Izin Submit Error:', err);
@@ -4798,3 +4874,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+            .then((reg) => console.log('ServiceWorker registered with scope:', reg.scope))
+            .catch((err) => console.error('ServiceWorker registration failed:', err));
+    });
+}
