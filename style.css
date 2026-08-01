@@ -1,30 +1,30 @@
 /* Design System & Variables */
 :root {
-  --primary: #6366f1;
-  --primary-light: #818cf8;
-  --primary-dark: #4f46e5;
-  --secondary: #64748b;
-  --background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-  --surface: rgba(255, 255, 255, 0.7);
-  --glass: rgba(255, 255, 255, 0.45);
-  --glass-border: rgba(255, 255, 255, 0.6);
-  --text: #1e1b4b;
-  --text-muted: #475569;
-  --error: #ef4444;
-  --success: #10b981;
+  --primary: #c62828;
+  --primary-light: #ef5350;
+  --primary-dark: #8e0000;
+  --secondary: #f9a825;
+  --background: linear-gradient(180deg, #c62828 0%, #ffffff 40%, #ffffff 100%);
+  --surface: rgba(255, 255, 255, 0.85);
+  --glass: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --text: #1b1b1b;
+  --text-muted: #5f5f5f;
+  --error: #b71c1c;
+  --success: #2e7d32;
   --radius: 20px;
-  --shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 25px rgba(99, 102, 241, 0.15);
+  --shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 25px rgba(198, 40, 40, 0.18);
   transition: all 0.5s ease;
   
   /* Offline Colors */
-  --offline-grad: linear-gradient(135deg, #f43f5e 0%, #fb923c 100%);
+  --offline-grad: linear-gradient(180deg, #c62828 0%, #ffffff 40%, #ffffff 100%);
 }
 
 /* Offline Mode Overrides */
 body.offline-mode {
-  --primary: #f43f5e;
-  --primary-light: #fb923c;
+  --primary: #c62828;
+  --primary-light: #ef5350;
   --background: #fff1f2;
 }
 
@@ -48,22 +48,22 @@ body.offline-mode #app-container {
 
 /* Dark Mode Overrides */
 body.dark-mode {
-  --background: #0f172a;
-  --surface: #1e293b;
-  --glass: rgba(30, 41, 59, 0.8);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --text: #f1f5f9;
-  --text-muted: #94a3b8;
-  --shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4);
+  --background: #9e1b1b;
+  --surface: rgba(255, 255, 255, 0.1);
+  --glass: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --text: #f8fafc;
+  --text-muted: #f3e5e5;
+  --shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.45);
 }
 
 body.dark-mode #app-container,
 body.dark-mode .screen,
 body.dark-mode #dashboard-screen,
 body.dark-mode #splash-screen {
-    background: #0f172a !important;
-    background-color: #0f172a !important;
+    background: linear-gradient(180deg, #9e1b1b 0%, #7f1d1d 100%) !important;
+    background-color: #9e1b1b !important;
 }
 
 body.dark-mode .clean-card, 
@@ -86,20 +86,20 @@ body.dark-mode #online-status-badge {
 
 body.dark-mode .picker-item:hover,
 body.dark-mode .checklist-item:hover {
-    background: #334155 !important;
+    background: rgba(255, 255, 255, 0.08) !important;
 }
 
 body.dark-mode .stat-box {
-    background: #334155 !important;
-    border-color: #475569 !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
 }
 
 body.dark-mode .attendance-row {
-    border-bottom-color: #334155 !important;
+    border-bottom-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 body.dark-mode .toast {
-    background-color: #1e293b !important;
+    background-color: rgba(255, 255, 255, 0.12) !important;
     box-shadow: 0 10px 25px rgba(0,0,0,0.4) !important;
 }
 
@@ -260,7 +260,7 @@ body {
 
 /* Splash Screen Styles */
 .splash {
-  background: linear-gradient(145deg, #1e3a8a 0%, #1e40af 50%, #3b82f6 100%);
+  background: linear-gradient(180deg, #c62828 0%, #ffffff 45%, #ffffff 100%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -280,7 +280,7 @@ body {
   transform: translate(-50%, -50%);
   object-fit: cover;
   z-index: 0;
-  opacity: 0.6; /* Slight transparency so it blends with gradient */
+  opacity: 0.95;
   transition: opacity 1s ease-in-out;
 }
 
@@ -290,7 +290,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(30, 58, 138, 0.5); /* Blue tint to match theme */
+  background: linear-gradient(180deg, rgba(198, 40, 40, 0.35) 0%, rgba(255,255,255,0.05) 70%);
   z-index: 1;
 }
 
@@ -625,16 +625,29 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.5rem;
-  padding: 0.25rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0 0 22px 22px;
+  background: linear-gradient(135deg, rgba(198,40,40,0.95) 0%, rgba(239,83,80,0.92) 45%, rgba(255,255,255,0.95) 100%);
+  box-shadow: 0 8px 24px rgba(198, 40, 40, 0.16);
+  position: relative;
+  overflow: hidden;
+}
+
+.dash-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.16), transparent 35%, rgba(255,255,255,0.14));
+  pointer-events: none;
 }
 
 #dashboard-screen > .dash-header {
   position: sticky;
   top: 0;
   z-index: 20;
-  background-color: var(--surface) !important;
+  background: linear-gradient(135deg, rgba(198,40,40,0.95) 0%, rgba(239,83,80,0.92) 45%, rgba(255,255,255,0.96) 100%) !important;
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.35);
 }
 
 .back-btn {
@@ -666,22 +679,34 @@ body {
 .avatar {
   width: 40px;
   height: 40px;
-  background-color: var(--primary-light);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   color: white;
   font-weight: 700;
+  border: 2px solid rgba(255,255,255,0.9);
+  box-shadow: 0 4px 12px rgba(198,40,40,0.2);
 }
 
 .card {
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: linear-gradient(135deg, rgba(198,40,40,0.95) 0%, rgba(239,83,80,0.95) 100%);
   padding: 1.5rem;
   border-radius: var(--radius);
   color: white;
   margin-bottom: 1.5rem;
   box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.16), transparent 55%, rgba(255,255,255,0.10));
+  pointer-events: none;
 }
 
 .card h2 {
@@ -734,6 +759,102 @@ body {
 .modal-overlay.active .modal-content {
   transform: translateY(0);
 }
+
+/* Larger vertical layout for informational modal */
+.modal-content.info {
+    max-width: 920px; /* allow larger image */
+    width: 96%;
+    border-radius: 20px;
+    padding: 0.75rem 1rem 1rem 1rem;
+    background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(250,250,250,0.99));
+    box-shadow: 0 28px 60px rgba(0,0,0,0.22);
+    position: relative;
+}
+
+.modal-content.info .modal-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    text-align: center;
+}
+
+/* Ensure modal-body column layout is not accidentally overridden */
+.modal-content.info .modal-body {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+}
+
+.modal-content.info .modal-body img {
+    width: 820px;
+    max-width: 100%;
+    height: auto;
+    border-radius: 14px;
+    border: 4px solid var(--primary);
+    display: block;
+}
+
+/* Ad media wrapper and inner rounded container */
+.ad-media-wrapper {
+    width: 100%;
+    display: block !important;
+    justify-content: center;
+    padding: 8px 6px 0 6px;
+}
+.ad-media-inner {
+    width: 100%;
+    max-width: 860px;
+    border-radius: 22px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(250,250,250,0.99));
+    padding: 8px;
+    box-shadow: inset 0 2px 12px rgba(0,0,0,0.05);
+}
+.ad-media-inner img { display:block; width:100%; height:auto; object-fit:cover; border-radius:14px; }
+
+/* Bottom info bar */
+.ad-info-bar {
+    display: block !important;
+    margin: 12px auto 0 auto !important;
+    width: calc(100% - 24px) !important;
+    max-width: 860px !important;
+    background: rgba(255,255,255,0.98);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    text-align: center;
+}
+.ad-info-title { font-weight:900; color:#b71c1c; font-size:1.15rem; }
+.ad-info-sub { margin-top:6px; color:var(--text-muted); font-size:0.95rem; }
+
+/* Ad-like close button */
+.modal-close {
+    position: absolute;
+    right: 10px;
+    top: 8px;
+    background: rgba(0,0,0,0.05);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--primary-dark);
+    transition: transform 0.12s ease, background 0.12s ease;
+}
+.modal-close:hover { transform: scale(1.06); background: rgba(0,0,0,0.08); }
+
+/* Subtle pop animation for ad modal */
+@keyframes popIn {
+    0% { transform: scale(0.96) translateY(8px); opacity: 0; }
+    60% { transform: scale(1.02) translateY(-4px); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.modal-content.info { animation: popIn 360ms cubic-bezier(.2,.8,.2,1); }
 
 .modal-header h3 {
   font-size: 1.25rem;

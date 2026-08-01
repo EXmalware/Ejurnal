@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260801">
 </head>
 
 <body>
@@ -323,30 +323,40 @@
         <!-- Dashboard Screen -->
         <section id="dashboard-screen" class="screen hidden">
             <header class="dash-header"
-                style="padding: 0; background: transparent; border: none; margin-bottom: 0.5rem;">
-                <div class="user-profile" style="gap: 0.75rem; position: relative;">
-                    <div id="avatar-btn" class="avatar"
-                        style="width: 42px; height: 42px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); border: 2px solid white; box-shadow: var(--shadow); font-size: 1rem; color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: transform 0.2s; overflow: hidden;">
-                        AD</div>
-                    <div style="flex-grow: 1;">
-                        <p
-                            style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-                            Selamat Datang,</p>
-                        <p style="font-weight: 800; font-size: 1.1rem; color: var(--text);">Admin User</p>
+                style="padding: 0.8rem 0.9rem; background: #8b0f0f; border: none; margin-bottom: 0.75rem; border-radius: 18px; box-shadow: 0 8px 20px rgba(80, 8, 8, 0.28); color: white;">
+                <div class="user-profile" style="gap: 0.75rem; position: relative; width: 100%; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 0;">
+                        <div id="avatar-btn" class="avatar"
+                            style="width: 42px; height: 42px; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.9); box-shadow: 0 4px 10px rgba(0,0,0,0.15); font-size: 1rem; color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: transform 0.2s; overflow: hidden; flex-shrink: 0;">
+                            AD</div>
+                        <div style="flex-grow: 1; min-width: 0;">
+                            <p style="font-size: 0.68rem; color: rgba(255,255,255,0.8); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">
+                                Selamat Datang,</p>
+                            <p style="font-weight: 800; font-size: 1rem; color: white; margin: 0.1rem 0 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Admin User</p>
 
-                        <!-- Academic Year Badge -->
-                        <div id="academic-year-badge"
-                            style="display: inline-block; width: fit-content; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; background: rgba(30, 64, 175, 0.1); color: var(--primary); border: 1px solid rgba(30, 64, 175, 0.2); border-radius: 8px; margin-top: 4px; text-transform: uppercase; margin-right: 5px; white-space: nowrap;">
-                            TA -
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.15rem;">
+                                <div id="academic-year-badge"
+                                    style="display: inline-block; width: fit-content; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; background: rgba(255,255,255,0.95); color: #b91c1c; border: 1px solid rgba(255,255,255,0.9); border-radius: 999px; text-transform: uppercase; white-space: nowrap;">
+                                    TA -
+                                </div>
+
+                                <div style="display: inline-block; width: fit-content; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; background: rgba(255,255,255,0.16); color: white; border: 1px solid rgba(255,255,255,0.35); border-radius: 999px; text-transform: uppercase; white-space: nowrap;">
+                                    🇮🇩 RI-81
+                                </div>
+
+                                <div id="online-status-badge"
+                                    style="display: inline-block; width: fit-content; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; background: rgba(255,255,255,0.16); color: white; border: 1px solid rgba(255,255,255,0.35); border-radius: 999px; text-transform: uppercase;">
+                                    ● Online</div>
+                            </div>
+                            <div id="sync-status-badge" class="hidden"
+                                style="display: inline-block; width: fit-content; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; background: rgba(255,255,255,0.16); color: white; border: 1px solid rgba(255,255,255,0.35); border-radius: 999px; margin-top: 0.35rem; text-transform: uppercase;">
+                                🔄 0 Pending</div>
                         </div>
-
-                        <div id="online-status-badge"
-                            style="display: inline-block; width: fit-content; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; margin-top: 4px; text-transform: uppercase;">
-                            ● Online</div>
-                        <div id="sync-status-badge" class="hidden"
-                            style="display: inline-block; width: fit-content; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 8px; margin-top: 4px; text-transform: uppercase; margin-left: 5px;">
-                            🔄 0 Pending</div>
                     </div>
+
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-nNBLSOJ3679y7z5zn74CiTISU57E6WEVOuWmYV5xQX1Qdu_ylAs5dw2d&s=10"
+                        alt="Logo Kemerdekaan"
+                        style="width: 58px; height: 58px; object-fit: cover; border-radius: 50%; border: 2px solid rgba(255,255,255,0.95); background: white; padding: 2px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.16);">
 
                     <!-- Profile Dropdown Menu -->
                     <div id="profile-dropdown" class="profile-dropdown glass-card">
@@ -394,14 +404,18 @@
                         </div>
                     </div>
 
-                    <!-- Slide 3: Agenda Mendatang -->
+                    <!-- Slide 3: HUT RI-81 -->
                     <div class="slide"
-                        style="flex: 0 0 100%; width: 100%; padding: 1.5rem; background: linear-gradient(135deg, #be123c 0%, #fb7185 100%); color: white; display: flex; flex-direction: column; justify-content: center;">
+                        style="flex: 0 0 100%; width: 100%; padding: 1.5rem; background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%); color: white; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/INDONESIA_logo.png/960px-INDONESIA_logo.png"
+                            alt="Garuda Pancasila"
+                            style="position: absolute; right: -8px; bottom: -8px; width: 92px; height: 92px; opacity: 0.22; object-fit: contain; pointer-events: none;">
                         <h2
-                            style="color: white; opacity: 0.8; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.5rem;">
-                            🚀 Agenda Mendatang</h2>
-                        <div id="upcoming-agenda-list">
-                            <p style="font-size: 0.9rem; font-weight: 700;">Memuat agenda...</p>
+                            style="color: white; opacity: 0.9; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.3px; margin-bottom: 0.4rem; position: relative; z-index: 1;">
+                            🎉 HUT RI-81</h2>
+                        <div id="upcoming-agenda-list" style="display: flex; flex-direction: column; gap: 0.25rem; position: relative; z-index: 1;">
+                            <p style="font-size: 1.05rem; font-weight: 800; line-height: 1.2; margin: 0;">17 Agustus 2026</p>
+                            <p style="font-size: 0.9rem; font-weight: 700; line-height: 1.3; margin: 0; opacity: 0.95;">Indonesia Berdaulat Adil dan Makmur</p>
                         </div>
                     </div>
 
@@ -1012,11 +1026,18 @@
         <!-- Popup Modal (Dynamic) -->
         <div id="info-modal" class="modal-overlay hidden">
             <div class="modal-content info">
+                <button id="close-info-x" class="modal-close" aria-label="Tutup">✖</button>
                 <div class="modal-header">
-                    <h3 id="modal-title">📢 Informasi</h3>
+                    <h3 id="modal-title">Dirgahayu Republik Indonesia ke 81 Tahun</h3>
                 </div>
                 <div class="modal-body" id="modal-message">
-                    Jangan lupa siapkan dokumen pembelajaran
+                    <div class="ad-media-wrapper">
+                        <div class="ad-media-inner">
+                            <img src="https://instagram.fsrg6-1.fna.fbcdn.net/v/t51.82787-15/759400424_17901676806531500_5457345125195457794_n.webp?_nc_cat=104&ig_cache_key=Mzk1MTI5MjU5NzA5MDg5MTc3Mw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTA4MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OjvJVWfbCqcQ7kNvwFcZs-D&_nc_oc=Adpb8PMO3C_JzVPqKMcAjv5oP9hfrvbzaA2OYkmZVdKCtIodg7E4VRtCl4HDzCRRwIw&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fsrg6-1.fna&_nc_gid=yiuUcvTDE-Vzw4USd7DWHw&_nc_ss=7a22e&oh=00_AQEtYi3Uvn2xiexUVPtW79c0bEbqI_q61H07T207TDPGtQ&oe=6A739E45" alt="Dirgahayu" />
+                        </div>
+                    </div>
+
+                    <!-- Info text removed per request; image enlarged below -->
                 </div>
                 <div class="modal-footer">
                     <button id="close-modal-btn" class="btn btn-primary">Siap!</button>

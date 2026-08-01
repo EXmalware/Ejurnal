@@ -1,17 +1,41 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // If assets still look stale due to service worker cache, unregister SW once and reload.
+    try {
+        if ('serviceWorker' in navigator && !localStorage.getItem('sw_unregistered_v20260801')) {
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                if (regs && regs.length) {
+                    Promise.all(regs.map(r => r.unregister())).then(() => {
+                        localStorage.setItem('sw_unregistered_v20260801', 'true');
+                        // reload to fetch fresh assets
+                        window.location.reload(true);
+                    }).catch(() => {
+                        // ignore errors, continue
+                    });
+                }
+            }).catch(() => {});
+        }
+    } catch (e) {}
     // Splash screen randomized video background
     const splashVideo = document.getElementById('splash-video');
     if (splashVideo) {
-        // Array of school-related video URLs (using high-quality free placeholders)
-        // User can replace these with direct MP4 links from Pixabay or other sources
+        // Array of Independence Day themed video URLs
         const splashVideos = [
-            "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-            "https://cdn.pixabay.com/video/2021/09/19/89066-613200185.mp4",
-            "https://cdn.pixabay.com/video/2023/01/10/146061-788094901.mp4"
+            "https://cdn.pixabay.com/video/2022/08/20/128469-741503567_large.mp4",
+            "https://cdn.pixabay.com/video/2023/01/30/148542-794355635_tiny.mp4",
+            "https://cdn.pixabay.com/video/2025/11/10/315047_tiny.mp4"
         ];
-        // Select a random video
         const randomVideo = splashVideos[Math.floor(Math.random() * splashVideos.length)];
-        splashVideo.src = randomVideo;
+        splashVideo.innerHTML = '';
+        const source = document.createElement('source');
+        source.src = randomVideo;
+        source.type = 'video/mp4';
+        splashVideo.muted = true;
+        splashVideo.appendChild(source);
+        splashVideo.load();
+        splashVideo.play().catch((err) => {
+            console.warn('Splash video autoplay disabled or blocked:', err);
+        });
+        splashVideo.style.display = 'block';
     }
 
     
@@ -32,6 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
         badge.innerText = academicYearText;
     }
     updateAcademicYear();
+
+    // (info modal will be shown after successful login with delay)
 
     const splashScreen = document.getElementById('splash-screen');
     const loginScreen = document.getElementById('login-screen');
@@ -928,6 +954,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         dashboardScreen.classList.remove('hidden');
                         dashboardScreen.classList.add('active');
                         history.replaceState({ screen: 'dashboard-screen' }, "");
+                        // If user is already logged in on page load (refresh), show info modal after 2s
+                        setTimeout(() => { try { showInfoPopup(); } catch (e) { /* non-fatal */ } }, 2000);
                     } else {
                         loginScreen.classList.remove('hidden');
                         loginScreen.classList.add('active');
@@ -1034,12 +1062,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         const rememberMe = document.getElementById('remember-me').checked;
                         localStorage.setItem('rememberMe', rememberMe);
 
-                        saveProfilePhotoForUser(user);
+                        const discoveredPhoto = getProfilePhotoFromUserData(user);
+                        saveProfilePhotoForUser({ ...user, FOTO: discoveredPhoto || user.FOTO });
                         localStorage.setItem('isLoggedIn', 'true');
-                        localStorage.setItem('userData', JSON.stringify(user));
-                        updateDashboard(user);
+                        const loginUser = {
+                            ...user,
+                            FOTO: discoveredPhoto || user.FOTO || getProfilePhotoFromUserData(user)
+                        };
+                        localStorage.setItem('userData', JSON.stringify(loginUser));
+                        updateDashboard(loginUser);
                         switchScreen('login-screen', 'dashboard-screen');
-                        showInfoPopup();
+                        // Show info modal after a short delay (2s) when user successfully reaches dashboard
+                        setTimeout(() => { try { showInfoPopup(); } catch (e) { /* non-fatal */ } }, 2000);
                     }
                 } else {
                     errorMsg.innerText = 'Kata sandi salah.';
@@ -1194,7 +1228,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const userNameElements = document.querySelectorAll('.user-profile p:nth-child(2)');
         userNameElements.forEach(el => el.innerText = user.NAMA || 'User');
 
-        updateAllAvatars();
+        const normalizedUser = { ...(user || {}) };
+        const currentStoredUser = JSON.parse(localStorage.getItem('userData') || '{}');
+        const userWithPhoto = {
+            ...currentStoredUser,
+            ...normalizedUser,
+            FOTO: normalizedUser.FOTO || currentStoredUser.FOTO || getProfilePhotoFromUserData(normalizedUser) || getProfilePhotoFromUserData(currentStoredUser)
+        };
+        localStorage.setItem('userData', JSON.stringify(userWithPhoto));
+        setTimeout(() => updateAllAvatars(), 0);
 
         // Update Stats Slide
         const userNama = (user.NAMA || '').toUpperCase().trim();
@@ -1393,7 +1435,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showInfoPopup() {
-        showAlert('📢 Informasi', 'Jangan lupa siapkan dokumen pembelajaran', 'info');
+        const imgUrl = 'https://instagram.fsrg6-1.fna.fbcdn.net/v/t51.82787-15/759400424_17901676806531500_5457345125195457794_n.webp?_nc_cat=104&ig_cache_key=Mzk1MTI5MjU5NzA5MDg5MTc3Mw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTA4MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OjvJVWfbCqcQ7kNvwFcZs-D&_nc_oc=Adpb8PMO3C_JzVPqKMcAjv5oP9hfrvbzaA2OYkmZVdKCtIodg7E4VRtCl4HDzCRRwIw&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fsrg6-1.fna&_nc_gid=yiuUcvTDE-Vzw4USd7DWHw&_nc_ss=7a22e&oh=00_AQEtYi3Uvn2xiexUVPtW79c0bEbqI_q61H07T207TDPGtQ&oe=6A739E45';
+        const messageHtml = `
+            <div style="display:flex;gap:0.75rem;align-items:center;">
+                <img src="${imgUrl}" style="width:379px;height:499px;object-fit:cover;border-radius:8px;border:2px solid var(--primary)">
+            </div>
+            <div style="display:flex;flex-direction:column;">
+                    <div style="font-weight:800;color:#b71c1c;font-size:1.05rem">Indonesia Lebih Baik</div>
+                    <div style="margin-top:6px;color:var(--text-muted);">Indonesia Berdaulat, Adil, dan Makmur</div>
+            </div>
+        `;
+        showAlert('Dirgahayu Republik Indonesia ke 81 Tahun', messageHtml, 'info');
     }
 
     function startDigitalClock() {
@@ -1515,13 +1567,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const infoModal = document.getElementById('info-modal');
     const closeModalBtn = document.getElementById('close-modal-btn');
-
     closeModalBtn.addEventListener('click', () => {
         infoModal.classList.remove('active');
         setTimeout(() => {
             infoModal.classList.add('hidden');
         }, 300);
     });
+
+    // Top-right close button for info modal (ad-like)
+    const closeInfoX = document.getElementById('close-info-x');
+    if (closeInfoX) {
+        closeInfoX.addEventListener('click', () => {
+            infoModal.classList.remove('active');
+            setTimeout(() => infoModal.classList.add('hidden'), 200);
+        });
+    }
 
     menuSiswa.addEventListener('click', () => {
         renderClassList();
@@ -1919,39 +1979,117 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getProfilePhotoFromUserData(userData) {
         if (!userData) return null;
-        const possibleFields = ['FOTO', 'PHOTO', 'PROFILE_PHOTO', 'PHOTO_PROFIL', 'IMAGE', 'AVATAR'];
+        const possibleFields = ['FOTO', 'PHOTO', 'PROFILE_PHOTO', 'PHOTO_PROFIL', 'IMAGE', 'AVATAR', 'FOTO_PROFIL', 'FOTO_PROFILE', 'PHOTO_PROFILE', 'PROFILE', 'PIC'];
         for (const key of possibleFields) {
             const value = userData[key];
             if (value && typeof value === 'string' && value.trim()) {
                 return value.trim();
             }
         }
+
+        const allValues = Object.values(userData || {});
+        for (const value of allValues) {
+            if (typeof value === 'string' && /^(data:image|blob:|https?:\/\/)/i.test(value.trim())) {
+                return value.trim();
+            }
+        }
+
         return null;
+    }
+
+    function normalizeAvatarPhoto(photoData) {
+        if (!photoData || typeof photoData !== 'string') return null;
+        let value = photoData.trim();
+        if (!value) return null;
+
+        if (value.includes('drive.google.com') && value.includes('/file/d/')) {
+            const match = value.match(/\/file\/d\/([^/]+)/);
+            if (match && match[1]) {
+                return `https://lh3.googleusercontent.com/d/${match[1]}=w600`;
+            }
+        }
+
+        if (value.includes('drive.google.com') && value.includes('id=')) {
+            const match = value.match(/[?&]id=([^&#]+)/);
+            if (match && match[1]) {
+                return `https://lh3.googleusercontent.com/d/${match[1]}=w600`;
+            }
+        }
+
+        if (value.startsWith('data:image') || value.startsWith('blob:') || /^https?:\/\//i.test(value)) {
+            return value;
+        }
+        return null;
+    }
+
+    function setAvatarElement(el, photoData, fallbackName = 'User') {
+        if (!el) return;
+        const initials = (fallbackName || 'User').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        el.innerHTML = '';
+        el.textContent = '';
+        el.style.background = 'linear-gradient(135deg, var(--primary), var(--primary-light))';
+        el.style.color = 'white';
+        el.style.display = 'flex';
+        el.style.alignItems = 'center';
+        el.style.justifyContent = 'center';
+        el.style.fontWeight = '800';
+
+        const normalizedPhoto = normalizeAvatarPhoto(photoData);
+        if (!normalizedPhoto) {
+            el.textContent = initials;
+            return;
+        }
+
+        const img = document.createElement('img');
+        img.src = normalizedPhoto;
+        img.alt = fallbackName || 'Avatar';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = 'inherit';
+        img.style.display = 'block';
+        img.onerror = function () {
+            el.innerHTML = '';
+            el.textContent = initials;
+            el.style.background = 'linear-gradient(135deg, var(--primary), var(--primary-light))';
+            el.style.color = 'white';
+        };
+        el.appendChild(img);
     }
 
     function saveProfilePhotoForUser(userData) {
         if (!userData) return;
         const key = getProfilePhotoKey(userData);
-        const current = localStorage.getItem(key);
-        const fallbackPhoto = getProfilePhotoFromUserData(userData);
-        if (!current && fallbackPhoto) {
-            localStorage.setItem(key, fallbackPhoto);
+        const fallbackPhoto = normalizeAvatarPhoto(getProfilePhotoFromUserData(userData));
+        const current = normalizeAvatarPhoto(localStorage.getItem(key));
+
+        const effectivePhoto = current || fallbackPhoto;
+        if (effectivePhoto) {
+            localStorage.setItem(key, effectivePhoto);
+            const updatedUser = { ...userData, FOTO: effectivePhoto };
+            localStorage.setItem('userData', JSON.stringify(updatedUser));
         }
-        if (current && !userData.FOTO) {
-            userData.FOTO = current;
-        }
+    }
+
+    function saveAvatarPhotoForUser(userData, photoData) {
+        if (!userData) return;
+        const normalizedPhoto = normalizeAvatarPhoto(photoData);
+        if (!normalizedPhoto) return;
+
+        const key = getProfilePhotoKey(userData);
+        localStorage.setItem(key, normalizedPhoto);
+
+        const updatedUser = { ...userData, FOTO: normalizedPhoto };
+        localStorage.setItem('userData', JSON.stringify(updatedUser));
     }
 
     function updateAllAvatars() {
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
         const key = getProfilePhotoKey(userData);
-        let savedPhoto = localStorage.getItem(key);
-        const fallbackPhoto = getProfilePhotoFromUserData(userData);
-
-        if (!savedPhoto && fallbackPhoto) {
-            savedPhoto = fallbackPhoto;
-            localStorage.setItem(key, fallbackPhoto);
-        }
+        const savedPhoto = normalizeAvatarPhoto(localStorage.getItem(key));
+        const userPhoto = normalizeAvatarPhoto(userData.FOTO);
+        const fallbackPhoto = normalizeAvatarPhoto(getProfilePhotoFromUserData(userData));
+        const effectivePhoto = userPhoto || savedPhoto || fallbackPhoto;
 
         const avatarElements = Array.from(document.querySelectorAll('.avatar'));
         if (avatarBtn) avatarElements.push(avatarBtn);
@@ -1959,18 +2097,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         avatarElements.forEach(el => {
             if (!el) return;
-            if (savedPhoto) {
-                el.innerHTML = `<img src="${savedPhoto}" style="width:100%; height:100%; object-fit:cover; border-radius: inherit;">`;
-            } else {
-                const name = userData.NAMA || 'User';
-                const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                el.innerText = initials;
-            }
+            setAvatarElement(el, effectivePhoto, userData.NAMA || 'User');
         });
     }
 
+    window.updateAllAvatars = updateAllAvatars;
+
     // Call this on init to show avatar in dashboard
-    updateAllAvatars();
+    setTimeout(() => updateAllAvatars(), 250);
 
     if (btnEditAvatar) {
         btnEditAvatar.addEventListener('click', () => {
@@ -2020,7 +2154,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
 
                         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-                        localStorage.setItem(`profile_photo_${userData.NIP || userData.KODEGURU}`, compressedBase64);
+                        saveAvatarPhotoForUser(userData, compressedBase64);
                         updateAllAvatars();
                         showToast('✅ Foto profil diperbarui dari galeri.', 'success');
 
@@ -2694,7 +2828,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (retakePhotoIzin) retakePhotoIzin.style.display = 'block';
                 } else if (currentCameraTarget === 'avatar') {
                     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-                    localStorage.setItem(`profile_photo_${userData.NIP || userData.KODEGURU}`, photoData);
+                    saveAvatarPhotoForUser(userData, photoData);
                     updateAllAvatars();
                     showToast('✅ Foto profil diperbarui dari kamera.', 'success');
 
