@@ -4995,7 +4995,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Profile Dropdown Logic
     avatarBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        profileDropdown.classList.toggle('active');
+        if (profileDropdown) {
+            profileDropdown.classList.toggle('active');
+            profileDropdown.style.display = profileDropdown.classList.contains('active') ? 'block' : 'none';
+        }
     });
 
     btnChangePhoto?.addEventListener('click', (e) => {
@@ -5005,8 +5008,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Close dropdown on outside click
-    document.addEventListener('click', () => {
-        profileDropdown?.classList.remove('active');
+    document.addEventListener('click', (e) => {
+        if (!profileDropdown) return;
+        if (!profileDropdown.contains(e.target) && !avatarBtn?.contains(e.target)) {
+            profileDropdown.classList.remove('active');
+            profileDropdown.style.display = 'none';
+        }
     });
 
     // Connectivity Monitoring
