@@ -5139,22 +5139,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateOnlineStatus() {
+        const statusBadge = document.getElementById('online-status-badge');
+        if (!statusBadge) return;
+
         if (navigator.onLine) {
             document.body.classList.remove('offline-mode');
-            const statusBadge = document.getElementById('online-status-badge');
-            if (statusBadge) {
-                statusBadge.innerText = 'Online';
-                statusBadge.style.background = 'rgba(16, 185, 129, 0.2)';
-                statusBadge.style.color = '#10b981';
-            }
+            statusBadge.textContent = '●';
+            statusBadge.title = 'Online';
+            statusBadge.style.background = '#16a34a';
+            statusBadge.style.color = '#ffffff';
+            statusBadge.style.boxShadow = '0 0 0 2px rgba(255,255,255,0.25)';
         } else {
             document.body.classList.add('offline-mode');
-            const statusBadge = document.getElementById('online-status-badge');
-            if (statusBadge) {
-                statusBadge.innerText = 'Offline';
-                statusBadge.style.background = 'rgba(239, 68, 68, 0.2)';
-                statusBadge.style.color = '#ef4444';
-            }
+            statusBadge.textContent = '●';
+            statusBadge.title = 'Offline';
+            statusBadge.style.background = '#dc2626';
+            statusBadge.style.color = '#ffffff';
+            statusBadge.style.boxShadow = '0 0 0 2px rgba(255,255,255,0.25)';
             showToast('⚠️ Koneksi Terputus. Anda masuk ke Mode Offline.', 'warning');
         }
     }
