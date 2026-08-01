@@ -584,8 +584,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const siswaIzinForm = document.getElementById('siswa-izin-form');
     const izinTanggalDisplay = document.getElementById('izin-tanggal-display');
     const selectIzinKelas = document.getElementById('izin-kelas');
-    const selectIzinSiswa = document.getElementById('izin-siswa');
-    const inputIzinNIS = document.getElementById('izin-nis');
+    const dropdownIzinStudents = document.getElementById('izin-student-dropdown');
+    const dropdownIzinStudentsToggle = document.getElementById('izin-student-dropdown-toggle');
+    const dropdownIzinStudentsToggleLabel = dropdownIzinStudentsToggle?.querySelector('span:first-child');
+    const dropdownIzinStudentsPanel = document.getElementById('izin-student-dropdown-panel');
     const openCameraIzin = document.getElementById('open-camera-izin');
     const izinCapturedImg = document.getElementById('izin-captured-img');
     const retakePhotoIzin = document.getElementById('retake-photo-izin');
@@ -643,6 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isEditMode = false;
     let currentEditingId = null;
     let originalJournalKeys = null;
+    let currentJournalEditData = null;
     let capturedPhotoData = null;
     let literasiCapturedPhotoData = null;
     let izinCapturedPhotoData = null;
@@ -755,13 +758,35 @@ document.addEventListener('DOMContentLoaded', () => {
     window.handleUserResponse = (response) => {
         usersData = parseGviz(response);
         localStorage.setItem('cached_users', JSON.stringify(usersData));
+
+        const savedUser = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (savedUser && (savedUser.NIP || savedUser.KODEGURU || savedUser.KODE || savedUser.NAMA)) {
+            const serverUser = usersData.find(u => {
+                const userKey = (u.NIP || u.KODEGURU || u['KODE GURU'] || u.KODE || '').toString().trim().toUpperCase();
+                const savedKey = (savedUser.NIP || savedUser.KODEGURU || savedUser.KODE || '').toString().trim().toUpperCase();
+                if (userKey && savedKey && userKey === savedKey) return true;
+                const nameA = (u.NAMA || '').toString().trim().toUpperCase();
+                const nameB = (savedUser.NAMA || '').toString().trim().toUpperCase();
+                return nameA && nameB && nameA === nameB;
+            });
+            if (serverUser) {
+                const serverPhoto = getProfilePhotoFromUserData(serverUser);
+                if (serverPhoto) {
+                    const key = getProfilePhotoKey(savedUser);
+                    localStorage.setItem(key, serverPhoto);
+                    savedUser.FOTO = serverPhoto;
+                    localStorage.setItem('userData', JSON.stringify(savedUser));
+                    updateAllAvatars();
+                }
+            }
+        }
     };
 
     window.handleStudentResponse = (response) => {
         studentsData = parseGviz(response);
         if (pendingStudentAttendanceRefresh) {
             if (selectKelas && selectKelas.value === pendingStudentAttendanceRefresh) {
-                renderStudentAttendanceList(selectKelas.value);
+                renderStudentAttendanceList(selectKelas.value, currentJournalEditData);
             }
             pendingStudentAttendanceRefresh = '';
         }
@@ -808,7 +833,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const journalScreen = document.getElementById('journal-form-screen');
         if (journalScreen && journalScreen.classList.contains('active')) {
             if (selectKelas && selectKelas.value) {
-                renderStudentAttendanceList(selectKelas.value);
+                renderStudentAttendanceList(selectKelas.value, currentJournalEditData);
             }
         }
 
@@ -1009,6 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const rememberMe = document.getElementById('remember-me').checked;
                         localStorage.setItem('rememberMe', rememberMe);
 
+                        saveProfilePhotoForUser(user);
                         localStorage.setItem('isLoggedIn', 'true');
                         localStorage.setItem('userData', JSON.stringify(user));
                         updateDashboard(user);
@@ -1168,10 +1194,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const userNameElements = document.querySelectorAll('.user-profile p:nth-child(2)');
         userNameElements.forEach(el => el.innerText = user.NAMA || 'User');
 
-        const avatar = document.querySelector('.avatar');
-        if (avatar && user.NAMA) {
-            avatar.innerText = user.NAMA.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-        }
+        updateAllAvatars();
 
         // Update Stats Slide
         const userNama = (user.NAMA || '').toUpperCase().trim();
@@ -1851,6 +1874,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof window.refreshBackgroundData === 'function') window.refreshBackgroundData();
         isEditMode = false;
         currentEditingId = null;
+        currentJournalEditData = null;
         initJournalForm();
         switchScreen('dashboard-screen', 'journal-form-screen');
     });
@@ -1888,16 +1912,55 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAllAvatars();
     }
 
+    function getProfilePhotoKey(userData) {
+        const userKey = userData?.NIP || userData?.KODEGURU || userData?.KODE || userData?.NAMA || 'default';
+        return `profile_photo_${userKey}`;
+    }
+
+    function getProfilePhotoFromUserData(userData) {
+        if (!userData) return null;
+        const possibleFields = ['FOTO', 'PHOTO', 'PROFILE_PHOTO', 'PHOTO_PROFIL', 'IMAGE', 'AVATAR'];
+        for (const key of possibleFields) {
+            const value = userData[key];
+            if (value && typeof value === 'string' && value.trim()) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    function saveProfilePhotoForUser(userData) {
+        if (!userData) return;
+        const key = getProfilePhotoKey(userData);
+        const current = localStorage.getItem(key);
+        const fallbackPhoto = getProfilePhotoFromUserData(userData);
+        if (!current && fallbackPhoto) {
+            localStorage.setItem(key, fallbackPhoto);
+        }
+        if (current && !userData.FOTO) {
+            userData.FOTO = current;
+        }
+    }
+
     function updateAllAvatars() {
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const savedPhoto = localStorage.getItem(`profile_photo_${userData.NIP || userData.KODEGURU}`);
+        const key = getProfilePhotoKey(userData);
+        let savedPhoto = localStorage.getItem(key);
+        const fallbackPhoto = getProfilePhotoFromUserData(userData);
 
-        const avatarElements = [avatarBtn, profileDetailAvatar];
+        if (!savedPhoto && fallbackPhoto) {
+            savedPhoto = fallbackPhoto;
+            localStorage.setItem(key, fallbackPhoto);
+        }
+
+        const avatarElements = Array.from(document.querySelectorAll('.avatar'));
+        if (avatarBtn) avatarElements.push(avatarBtn);
+        if (profileDetailAvatar) avatarElements.push(profileDetailAvatar);
 
         avatarElements.forEach(el => {
             if (!el) return;
             if (savedPhoto) {
-                el.innerHTML = `<img src="${savedPhoto}" style="width:100%; height:100%; object-fit:cover;">`;
+                el.innerHTML = `<img src="${savedPhoto}" style="width:100%; height:100%; object-fit:cover; border-radius: inherit;">`;
             } else {
                 const name = userData.NAMA || 'User';
                 const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
@@ -2343,7 +2406,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     backFromJurnalForm.addEventListener('click', () => {
-
+        currentJournalEditData = null;
         switchScreen('journal-form-screen', 'dashboard-screen');
     });
 
@@ -2380,6 +2443,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initJournalForm(editData = null) {
+        currentJournalEditData = editData || null;
         journalEntryForm.reset();
         studentAttendanceList.innerHTML = '';
         totalSiswaVal.innerText = '0';
@@ -2685,7 +2749,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    function normalizeAttendanceName(value) {
+        return String(value ?? '')
+            .normalize('NFKD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase()
+            .replace(/[^A-Z0-9]+/g, ' ')
+            .trim();
+    }
+
+    function parseAttendanceNameList(value) {
+        if (Array.isArray(value)) {
+            return value.map(item => normalizeAttendanceName(item)).filter(Boolean);
+        }
+        if (value === null || value === undefined || value === '') {
+            return [];
+        }
+        if (typeof value === 'object') {
+            return Object.values(value)
+                .flatMap(item => parseAttendanceNameList(item))
+                .filter(Boolean);
+        }
+        return String(value)
+            .split(/[;,|]/)
+            .map(item => normalizeAttendanceName(item))
+            .filter(Boolean);
+    }
+
+    function matchesAttendanceName(studentName, attendanceNames) {
+        const normalizedStudent = normalizeAttendanceName(studentName);
+        if (!normalizedStudent) return false;
+        return attendanceNames.some(entry => {
+            if (!entry) return false;
+            return normalizedStudent === entry || entry.includes(normalizedStudent) || normalizedStudent.includes(entry);
+        });
+    }
+
     function renderStudentAttendanceList(kelas, editData = null) {
+        const effectiveEditData = editData || currentJournalEditData;
         const studentsInClass = studentsData.filter(s => {
             if (s.KELAS !== kelas) return false;
             if (!(s.NAMA_PESERTA_DIDIK || s.NAMA || '').trim()) return false;
@@ -2719,9 +2820,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const allIzinForClass = [...todayIzinForClassServer, ...todayIzinForClassLocal];
 
-        const alpha = (editData?.SISWA_ALPHA || editData?.ALPHA || '').split(',').map(s => s.trim().toUpperCase());
-        const izin = (editData?.SISWA_IZIN || editData?.IZIN || '').split(',').map(s => s.trim().toUpperCase());
-        const sakit = (editData?.SISWA_SAKIT || editData?.SAKIT || '').split(',').map(s => s.trim().toUpperCase());
+        const alpha = parseAttendanceNameList(effectiveEditData?.SISWA_ALPHA || effectiveEditData?.ALPHA || '');
+        const izin = parseAttendanceNameList(effectiveEditData?.SISWA_IZIN || effectiveEditData?.IZIN || '');
+        const sakit = parseAttendanceNameList(effectiveEditData?.SISWA_SAKIT || effectiveEditData?.SAKIT || '');
 
         studentsInClass.forEach((s, index) => {
             const name = s.NAMA_PESERTA_DIDIK || s.NAMA;
@@ -2733,10 +2834,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let bkKeterangan = '';
 
             // Priority 1: Edit Data (if editing existing journal)
-            if (editData) {
-                if (alpha.includes(upperName)) status = 'A';
-                else if (izin.includes(upperName)) status = 'I';
-                else if (sakit.includes(upperName)) status = 'S';
+            if (effectiveEditData) {
+                if (matchesAttendanceName(name, alpha)) status = 'A';
+                else if (matchesAttendanceName(name, izin)) status = 'I';
+                else if (matchesAttendanceName(name, sakit)) status = 'S';
             }
             // Priority 2: Auto-sync from Siswa Izin for today
             else {
@@ -2882,6 +2983,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.disabled = false;
                 isEditMode = false;
                 currentEditingId = null;
+                currentJournalEditData = null;
                 switchScreen('journal-form-screen', 'dashboard-screen');
 
                 // Trigger auto-sync if online
@@ -4529,12 +4631,19 @@ document.addEventListener('DOMContentLoaded', () => {
             el.style.background = 'var(--background)';
             el.style.border = '1px solid var(--border)';
             el.style.borderRadius = 'var(--radius)';
+            el.style.gap = '0.75rem';
             el.innerHTML = `
-                <div>
+                <div style="flex: 1; min-width: 0;">
                     <div style="font-weight: 700; font-size: 0.95rem; color: var(--text);">${item.NAMA_SISWA}</div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted);">${item.KELAS} | ${item.NIS} | <span style="font-weight: 600; color: var(--primary);">${item.KETERANGAN}</span></div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem;">${item.KELAS} | ${item.NIS}</div>
                 </div>
-                <button type="button" class="btn-remove-cart-item" data-index="${index}" style="background: none; border: none; color: #ef4444; font-size: 1.25rem; cursor: pointer;">✖</button>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <select class="izin-status-select" data-index="${index}" style="border: 1px solid rgba(148,163,184,0.4); border-radius: 12px; padding: 0.45rem 0.75rem; background: white; color: var(--text); font-size: 0.9rem;">
+                        <option value="Izin" ${item.KETERANGAN === 'Izin' ? 'selected' : ''}>Izin</option>
+                        <option value="Sakit" ${item.KETERANGAN === 'Sakit' ? 'selected' : ''}>Sakit</option>
+                    </select>
+                    <button type="button" class="btn-remove-cart-item" data-index="${index}" style="background: none; border: none; color: #ef4444; font-size: 1.4rem; cursor: pointer; line-height: 1;">✖</button>
+                </div>
             `;
             izinStudentsCart.appendChild(el);
         });
@@ -4547,6 +4656,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderIzinCart();
             });
         });
+
+        const statusSelects = izinStudentsCart.querySelectorAll('.izin-status-select');
+        statusSelects.forEach(select => {
+            select.addEventListener('change', (e) => {
+                const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+                if (currentIzinCart[idx]) {
+                    currentIzinCart[idx].KETERANGAN = e.currentTarget.value;
+                }
+            });
+        });
     }
 
     function initIzinForm() {
@@ -4556,7 +4675,6 @@ document.addEventListener('DOMContentLoaded', () => {
         izinCapturedPhotoData = null;
         izinCapturedImg.style.display = 'none';
         retakePhotoIzin.style.display = 'none';
-        inputIzinNIS.value = '';
 
         const now = new Date();
         izinTanggalDisplay.innerText = formatDateIndo(now.toLocaleDateString('en-CA'));
@@ -4566,36 +4684,63 @@ document.addEventListener('DOMContentLoaded', () => {
         selectIzinKelas.innerHTML = '<option value="">Pilih Kelas...</option>' +
             classes.map(c => `<option value="${c}">${c}</option>`).join('');
 
-        selectIzinSiswa.innerHTML = '<option value="">Pilih Siswa...</option>';
-        selectIzinSiswa.disabled = true;
+        dropdownIzinStudentsPanel.innerHTML = '<p style="color: var(--text-muted);">Pilih kelas terlebih dahulu.</p>';
+        dropdownIzinStudentsPanel.classList.add('hidden');
+        updateIzinDropdownToggleLabel();
     }
+
+    const updateIzinDropdownToggleLabel = () => {
+        if (!dropdownIzinStudentsToggleLabel || !dropdownIzinStudentsPanel) return;
+        const selectedCount = dropdownIzinStudentsPanel.querySelectorAll('input[type="checkbox"]:checked').length;
+        dropdownIzinStudentsToggleLabel.innerText = selectedCount > 0 ? `${selectedCount} siswa dipilih` : 'Pilih Siswa...';
+    };
 
     selectIzinKelas?.addEventListener('change', () => {
         const kelas = selectIzinKelas.value;
         if (kelas) {
-            const studentsInClass = studentsData.filter(s => s.KELAS === kelas && (s.NAMA_PESERTA_DIDIK || s.NAMA || '').trim() !== '').sort((a, b) => {
+            const studentsInClass = studentsData.filter(s => {
+                const name = (s.NAMA_PESERTA_DIDIK || s.NAMA || '').trim();
+                const status = String(s.STATUS || s.Status || s.status || '').trim().toUpperCase();
+                return s.KELAS === kelas && name !== '' && status !== 'KELUAR';
+            }).sort((a, b) => {
                 const nameA = (a.NAMA_PESERTA_DIDIK || a.NAMA || '').toUpperCase();
                 const nameB = (b.NAMA_PESERTA_DIDIK || b.NAMA || '').toUpperCase();
                 return nameA.localeCompare(nameB);
             });
 
-            selectIzinSiswa.innerHTML = '<option value="">Pilih Siswa...</option>' +
-                studentsInClass.map(s => `<option value="${s.NAMA_PESERTA_DIDIK || s.NAMA}">${s.NAMA_PESERTA_DIDIK || s.NAMA}</option>`).join('');
-            selectIzinSiswa.disabled = false;
+            dropdownIzinStudentsPanel.innerHTML = studentsInClass.map((s, idx) => {
+                const name = s.NAMA_PESERTA_DIDIK || s.NAMA;
+                const nis = s.NIS || s.NISN || '';
+                return `
+                    <label class="checklist-item" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(148,163,184,0.12);">
+                        <input type="checkbox" data-name="${name}" data-nis="${nis}" data-kelas="${s.KELAS}" value="${name}" style="width: 1rem; height: 1rem;">
+                        <span style="flex:1;">${name} ${nis ? `(${nis})` : ''}</span>
+                    </label>
+                `;
+            }).join('');
+            dropdownIzinStudentsPanel.classList.remove('hidden');
+            updateIzinDropdownToggleLabel();
         } else {
-            selectIzinSiswa.innerHTML = '<option value="">Pilih Siswa...</option>';
-            selectIzinSiswa.disabled = true;
-            inputIzinNIS.value = '';
+            dropdownIzinStudentsPanel.innerHTML = '<p style="color: var(--text-muted);">Pilih kelas terlebih dahulu.</p>';
+            updateIzinDropdownToggleLabel();
         }
     });
 
-    selectIzinSiswa?.addEventListener('change', () => {
-        const nama = selectIzinSiswa.value;
-        const student = studentsData.find(s => (s.NAMA_PESERTA_DIDIK || s.NAMA) === nama);
-        if (student) {
-            inputIzinNIS.value = student.NIS || student.NISN || '';
-        } else {
-            inputIzinNIS.value = '';
+    dropdownIzinStudentsPanel?.addEventListener('change', (e) => {
+        if (e.target && e.target.matches('input[type="checkbox"]')) {
+            updateIzinDropdownToggleLabel();
+        }
+    });
+
+    dropdownIzinStudentsToggle?.addEventListener('click', () => {
+        if (!dropdownIzinStudentsPanel) return;
+        dropdownIzinStudentsPanel.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!dropdownIzinStudents || !dropdownIzinStudentsPanel || !dropdownIzinStudentsToggle) return;
+        if (!dropdownIzinStudents.contains(e.target)) {
+            dropdownIzinStudentsPanel.classList.add('hidden');
         }
     });
 
@@ -4610,32 +4755,38 @@ document.addEventListener('DOMContentLoaded', () => {
     if (siswaIzinForm) {
         btnAddSiswaIzin?.addEventListener('click', () => {
             const kelas = selectIzinKelas.value;
-            const nama = selectIzinSiswa.value;
-            const nis = inputIzinNIS.value;
-            const keterangan = document.getElementById('izin-keterangan').value;
+            const selectedCheckboxes = Array.from(dropdownIzinStudentsPanel.querySelectorAll('input[type="checkbox"]:checked'));
 
-            if (!kelas || !nama || !keterangan) {
-                showAlert('Peringatan', 'Harap isi Kelas, Nama Siswa, dan Keterangan Izin sebelum menambahkan ke daftar.', 'warning');
+            if (!kelas || selectedCheckboxes.length === 0) {
+                showAlert('Peringatan', 'Harap pilih kelas dan minimal satu siswa.', 'warning');
                 return;
             }
 
-            if (currentIzinCart.some(item => item.NIS === nis)) {
-                showAlert('Peringatan', 'Siswa ini sudah ada di dalam daftar izin saat ini.', 'warning');
-                return;
-            }
-
-            currentIzinCart.push({
-                KELAS: kelas,
-                NAMA_SISWA: nama,
-                NIS: nis,
-                KETERANGAN: keterangan
+            let addedCount = 0;
+            selectedCheckboxes.forEach(checkbox => {
+                const nama = checkbox.dataset.name || checkbox.value;
+                const nis = checkbox.dataset.nis || '';
+                const itemExists = currentIzinCart.some(item => item.NIS === nis && item.NAMA_SISWA === nama && item.KELAS === kelas);
+                if (!itemExists) {
+                    currentIzinCart.push({
+                        KELAS: kelas,
+                        NAMA_SISWA: nama,
+                        NIS: nis,
+                        KETERANGAN: 'Izin'
+                    });
+                    addedCount += 1;
+                }
             });
 
-            renderIzinCart();
+            if (addedCount === 0) {
+                showAlert('Peringatan', 'Siswa yang dipilih sudah ada di daftar izin.', 'warning');
+                return;
+            }
 
-            selectIzinSiswa.value = '';
-            inputIzinNIS.value = '';
-            document.getElementById('izin-keterangan').value = '';
+            renderIzinCart();
+            dropdownIzinStudentsPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateIzinDropdownToggleLabel();
+            dropdownIzinStudentsPanel.classList.add('hidden');
         });
 
         siswaIzinForm.addEventListener('submit', (e) => {
