@@ -1435,7 +1435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showInfoPopup() {
-        const imgUrl = 'https://instagram.fsrg6-1.fna.fbcdn.net/v/t51.82787-15/759400424_17901676806531500_5457345125195457794_n.webp?_nc_cat=104&ig_cache_key=Mzk1MTI5MjU5NzA5MDg5MTc3Mw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTA4MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OjvJVWfbCqcQ7kNvwFcZs-D&_nc_oc=Adpb8PMO3C_JzVPqKMcAjv5oP9hfrvbzaA2OYkmZVdKCtIodg7E4VRtCl4HDzCRRwIw&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fsrg6-1.fna&_nc_gid=yiuUcvTDE-Vzw4USd7DWHw&_nc_ss=7a22e&oh=00_AQEtYi3Uvn2xiexUVPtW79c0bEbqI_q61H07T207TDPGtQ&oe=6A739E45';
+        const imgUrl = 'https://blogger.googleusercontent.com/img/a/AVvXsEhJzpOi5WnGDRvBi6ZkZtJhu5TnX8RssXHyZdH7efnR6vote-zdS9Q60goKxv2YzmRctUqWqZAzir6TeElEKvAPGKpifYArczJpb_6oUYuklcBhlIDjV4Cih4ffcTgtyC4bUpOsuqiFe8vkgltbHbUxVFduqg5b0aboygQH-t2M2F6Vu-XIAV1ur6KO-ng';
         const messageHtml = `
             <div style="display:flex;gap:0.75rem;align-items:center;">
                 <img src="${imgUrl}" style="width:379px;height:499px;object-fit:cover;border-radius:8px;border:2px solid var(--primary)">
