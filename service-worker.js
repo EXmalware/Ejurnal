@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ejurnal-cache-v4.0.3';
+const CACHE_NAME = 'ejurnal-cache-v4.0.5';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',

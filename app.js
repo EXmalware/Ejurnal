@@ -20,9 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (splashVideo) {
         // Array of Independence Day themed video URLs
         const splashVideos = [
-            "https://cdn.pixabay.com/video/2022/08/20/128469-741503567_large.mp4",
-            "https://cdn.pixabay.com/video/2023/01/30/148542-794355635_tiny.mp4",
-            "https://cdn.pixabay.com/video/2025/11/10/315047_tiny.mp4"
+            "https://cdn.pixabay.com/video/2024/06/06/215472_tiny.mp4",
+            "https://cdn.pixabay.com/video/2023/01/10/146062-788094906_tiny.mp4",
+            "https://cdn.pixabay.com/video/2025/02/13/258027_tiny.mp4"
         ];
         const randomVideo = splashVideos[Math.floor(Math.random() * splashVideos.length)];
         splashVideo.innerHTML = '';
@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardScreen = document.getElementById('dashboard-screen');
     const loginForm = document.getElementById('login-form');
     const logoutBtn = document.getElementById('logout-btn');
+    const btnSignOutProfile = document.getElementById('btn-sign-out-profile');
     const avatarBtn = document.getElementById('avatar-btn');
     const profileDropdown = document.getElementById('profile-dropdown');
     const studentsScreen = document.getElementById('students-screen');
@@ -77,8 +78,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const backFromDetail = document.getElementById('back-from-detail');
     const menuRekap = document.getElementById('menu-rekap');
     const rekapScreen = document.getElementById('rekap-screen');
-    const rekapListContainer = document.getElementById('rekap-list-container');
     const backFromRekap = document.getElementById('back-from-rekap');
+    const rekapListContainer = document.getElementById('rekap-list-container');
+    const menuJurnalHariIni = document.getElementById('menu-jurnal-hari-ini');
+    const jurnalHariIniScreen = document.getElementById('jurnal-hari-ini-screen');
+    const backFromJurnalHariIni = document.getElementById('back-from-jurnal-hari-ini');
+    const jurnalHariIniContainer = document.getElementById('jurnal-hari-ini-container');
+    const jumatPertamaScreen = document.getElementById('jumat-pertama-screen');
+    const jumatPertamaContainer = document.getElementById('jumat-pertama-container');
+    const backFromJumatPertama = document.getElementById('back-from-jumat-pertama');
 
     const menuEkspor = document.getElementById('menu-ekspor');
     const eksporScreen = document.getElementById('ekspor-screen');
@@ -550,9 +558,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const themeMeta = document.querySelector('meta[name="theme-color"]');
         if (themeMeta) {
             if (!isOnline) {
-                themeMeta.setAttribute('content', '#f43f5e'); // Red when offline
+                themeMeta.setAttribute('content', '#1e3a8a'); // Blue when offline
             } else {
-                themeMeta.setAttribute('content', isDark ? '#0f172a' : '#6366f1');
+                themeMeta.setAttribute('content', isDark ? '#0f172a' : '#1e3a8a');
             }
         }
     }
@@ -631,10 +639,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const calendarScreen = document.getElementById('calendar-screen');
     const backFromCalendar = document.getElementById('back-from-calendar');
     const agendaList = document.getElementById('agenda-list');
+    const menuJumatPertama = document.getElementById('menu-jumat-pertama');
 
     // Summary Stats Elements
     const statJurnalCount = document.getElementById('stat-jurnal-count');
     const statIzinCount = document.getElementById('stat-izin-count');
+    const todayIzinStat = document.getElementById('today-izin-stat');
     const statClock = document.getElementById('stat-clock');
     const statJamPelajaran = document.getElementById('stat-jam-pelajaran');
 
@@ -900,6 +910,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateOnlineStatus(); // Check initial status
 
+        const quickStatsRefreshBtn = document.getElementById('quick-stats-refresh-btn');
+        const quickStatsRefreshIcon = document.getElementById('quick-stats-refresh-icon');
+        if (quickStatsRefreshBtn) {
+            quickStatsRefreshBtn.addEventListener('click', () => {
+                if (!navigator.onLine) {
+                    showToast('❌ Gagal memuat data. Anda sedang Offline.', 'error');
+                    return;
+                }
+                if (quickStatsRefreshIcon) quickStatsRefreshIcon.classList.add('spinning');
+                showToast('🔄 Memuat data terbaru...', 'info');
+
+                if (typeof window.refreshBackgroundData === 'function') {
+                    window.refreshBackgroundData();
+                }
+
+                setTimeout(() => {
+                    if (typeof updateTodaySummary === 'function') updateTodaySummary();
+                    if (quickStatsRefreshIcon) quickStatsRefreshIcon.classList.remove('spinning');
+                    showToast('✓ Data berhasil diperbarui', 'success');
+                }, 1500);
+            });
+        }
+
+        const jurnalHariIniRefreshBtn = document.getElementById('jurnal-hari-ini-refresh-btn');
+        const jurnalHariIniRefreshIcon = document.getElementById('jurnal-hari-ini-refresh-icon');
+        if (jurnalHariIniRefreshBtn) {
+            jurnalHariIniRefreshBtn.addEventListener('click', () => {
+                if (!navigator.onLine) {
+                    showToast('❌ Gagal memuat data. Anda sedang Offline.', 'error');
+                    return;
+                }
+                if (jurnalHariIniRefreshIcon) jurnalHariIniRefreshIcon.classList.add('spinning');
+                showToast('🔄 Memuat data terbaru...', 'info');
+
+                if (typeof window.refreshBackgroundData === 'function') {
+                    window.refreshBackgroundData();
+                }
+
+                setTimeout(() => {
+                    if (typeof renderJurnalHariIni === 'function') renderJurnalHariIni();
+                    if (typeof updateTodaySummary === 'function') updateTodaySummary();
+                    if (jurnalHariIniRefreshIcon) jurnalHariIniRefreshIcon.classList.remove('spinning');
+                    showToast('✓ Data berhasil diperbarui', 'success');
+                }, 1500);
+            });
+        }
+
         try {
             window.loadSheet = (id, name, callback) => {
                 const script = document.createElement('script');
@@ -953,6 +1010,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         updateDashboard(savedUser);
                         dashboardScreen.classList.remove('hidden');
                         dashboardScreen.classList.add('active');
+                        updateBottomNav('dashboard-screen');
                         history.replaceState({ screen: 'dashboard-screen' }, "");
                         // If user is already logged in on page load (refresh), show info modal after 2s
                         setTimeout(() => { try { showInfoPopup(); } catch (e) { /* non-fatal */ } }, 2000);
@@ -1166,12 +1224,153 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ---- Magic Liquid Navbar: konfigurasi bentuk gelombang ----
+    const NAV_WAVE_W = 380;   // lebar acuan viewBox
+    const NAV_WAVE_R = 0;     // radius sudut atas bar (0 = siku, tidak rounded)
+    const NAV_WAVE_BAR_H = 70; // tinggi badan bar (area datar)
+    const NAV_BUMP_W = 112;   // lebar tonjolan gelombang
+    const NAV_BUMP_PEAK = -24; // kedalaman tonjolan (semakin negatif semakin dalam)
+
+    function navWavePathFlat() {
+        return `M0,${NAV_WAVE_R} Q0,0 ${NAV_WAVE_R},0 L${NAV_WAVE_W - NAV_WAVE_R},0 Q${NAV_WAVE_W},0 ${NAV_WAVE_W},${NAV_WAVE_R} L${NAV_WAVE_W},${NAV_WAVE_BAR_H} L0,${NAV_WAVE_BAR_H} Z`;
+    }
+
+    function navWavePathAt(cx) {
+        const bw2 = NAV_BUMP_W / 2;
+        return `M0,${NAV_WAVE_R} Q0,0 ${NAV_WAVE_R},0 ` +
+            `L${cx - bw2 - 26},0 ` +
+            `C${cx - bw2 + 8},0 ${cx - bw2 + 22},${NAV_BUMP_PEAK} ${cx},${NAV_BUMP_PEAK} ` +
+            `C${cx + bw2 - 22},${NAV_BUMP_PEAK} ${cx + bw2 - 8},0 ${cx + bw2 + 26},0 ` +
+            `L${NAV_WAVE_W - NAV_WAVE_R},0 Q${NAV_WAVE_W},0 ${NAV_WAVE_W},${NAV_WAVE_R} ` +
+            `L${NAV_WAVE_W},${NAV_WAVE_BAR_H} L0,${NAV_WAVE_BAR_H} Z`;
+    }
+
+    function navWaveEase(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    let navWaveCurrentCx = null;
+    let navWaveRaf = null;
+    let navWaveStartTs = null;
+    let navWaveFromCx = null;
+    let navWaveToCx = null;
+    const NAV_WAVE_DURATION = 500;
+
+    function navWaveAnimateTo(targetCx) {
+        const wavepath = document.getElementById('bottom-nav-wavepath');
+        if (!wavepath) return;
+
+        if (navWaveCurrentCx === null) {
+            // Belum pernah digambar: langsung set tanpa animasi.
+            navWaveCurrentCx = targetCx;
+            wavepath.setAttribute('d', navWavePathAt(targetCx));
+            return;
+        }
+
+        if (navWaveRaf) cancelAnimationFrame(navWaveRaf);
+        navWaveFromCx = navWaveCurrentCx;
+        navWaveToCx = targetCx;
+        navWaveStartTs = null;
+
+        function step(ts) {
+            if (!navWaveStartTs) navWaveStartTs = ts;
+            const progress = Math.min((ts - navWaveStartTs) / NAV_WAVE_DURATION, 1);
+            const cx = navWaveFromCx + (navWaveToCx - navWaveFromCx) * navWaveEase(progress);
+            wavepath.setAttribute('d', navWavePathAt(cx));
+            navWaveCurrentCx = cx;
+            if (progress < 1) {
+                navWaveRaf = requestAnimationFrame(step);
+            } else {
+                navWaveRaf = null;
+            }
+        }
+        navWaveRaf = requestAnimationFrame(step);
+    }
+
+    // Screens on which the bottom navigation bar should be visible, and
+    // which nav item (by data-nav) corresponds to each of them.
+    const BOTTOM_NAV_SCREENS = {
+        'dashboard-screen': 'home',
+        'students-screen': 'home',
+        'student-detail-screen': 'home',
+        'journal-form-screen': 'isi-jurnal',
+        'jurnal-hari-ini-screen': 'aktifitas',
+        'rekap-screen': null,
+        'rekap-kelas-screen': null,
+        'laporan-kehadiran-screen': null,
+        'literasi-rekap-screen': 'home',
+        'literasi-form-screen': 'home',
+        'piket-form-screen': 'home',
+        'calendar-screen': 'home',
+        'siswa-izin-list-screen': 'home',
+        'siswa-izin-screen': 'home',
+        'jumat-pertama-screen': 'home',
+        'ekspor-screen': null,
+        'settings-screen': 'setelan',
+        'teacher-profile-screen': 'profil',
+        'change-password-screen': 'setelan'
+    };
+
+    function setActiveNavItem(activeKey) {
+        const bottomNav = document.getElementById('bottom-nav');
+        if (!bottomNav) return;
+
+        const items = Array.from(bottomNav.querySelectorAll('.bottom-nav-item'));
+        const activeIndex = items.findIndex((item) => item.dataset.nav === activeKey);
+
+        items.forEach((item, index) => {
+            item.classList.toggle('active', index === activeIndex);
+        });
+
+        const wavepath = document.getElementById('bottom-nav-wavepath');
+        if (!wavepath) return;
+
+        if (activeIndex === -1) {
+            // Tidak ada item aktif (mis. layar ekspor): tampilkan bar datar.
+            if (navWaveRaf) cancelAnimationFrame(navWaveRaf);
+            navWaveRaf = null;
+            navWaveCurrentCx = null;
+            wavepath.setAttribute('d', navWavePathFlat());
+            return;
+        }
+
+        const n = items.length;
+        const cx = (NAV_WAVE_W / n) * (activeIndex + 0.5);
+        navWaveAnimateTo(cx);
+    }
+
+    let bottomNavResizeTimer = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(bottomNavResizeTimer);
+        bottomNavResizeTimer = setTimeout(() => {
+            const bottomNav = document.getElementById('bottom-nav');
+            if (!bottomNav || bottomNav.classList.contains('hidden')) return;
+            const activeItem = bottomNav.querySelector('.bottom-nav-item.active');
+            if (activeItem) setActiveNavItem(activeItem.dataset.nav);
+        }, 120);
+    });
+
+    function updateBottomNav(toId) {
+        const bottomNav = document.getElementById('bottom-nav');
+        if (!bottomNav) return;
+
+        if (Object.prototype.hasOwnProperty.call(BOTTOM_NAV_SCREENS, toId)) {
+            bottomNav.classList.remove('hidden');
+            const activeKey = BOTTOM_NAV_SCREENS[toId];
+            setActiveNavItem(activeKey);
+        } else {
+            bottomNav.classList.add('hidden');
+        }
+    }
+
     function switchScreen(fromId, toId, isPopState = false) {
         document.getElementById(fromId).classList.remove('active');
         document.getElementById(fromId).classList.add('hidden');
         const toScreen = document.getElementById(toId);
         toScreen.classList.remove('hidden');
         toScreen.classList.add('active');
+
+        updateBottomNav(toId);
 
         if (toId === 'dashboard-screen') {
             updateSyncStatus();
@@ -1413,8 +1612,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 1. Journal Count
         const cachedJurnals = JSON.parse(localStorage.getItem('cached_jurnals') || '[]');
-        const todayCached = cachedJurnals.filter(j => j.TANGGAL === todayStr).length;
+        const todayCached = cachedJurnals.filter(j => {
+            const mapel = String(j.MAPEL || j.MATA_PELAJARAN || '').trim();
+            if (mapel === 'Presensi (Bimbingan Konseling)') return false;
+            return j.TANGGAL === todayStr;
+        }).length;
         const todayServer = jurnalData.filter(j => {
+            const mapel = String(j.MAPEL || j.MATA_PELAJARAN || '').trim();
+            if (mapel === 'Presensi (Bimbingan Konseling)') return false;
             const jDate = j.TANGGAL || '';
             return jDate.includes(todayStr) || jDate === todayStr;
         }).length;
@@ -1422,7 +1627,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 2. Izin Count (Local cache + Server data)
         const cachedIzin = JSON.parse(localStorage.getItem('cached_siswa_izin') || '[]');
-        const todayCachedIzin = cachedIzin.filter(i => i.TANGGAL === todayStr).length;
+        const todayCachedIzin = cachedIzin.filter(i => String(i.TANGGAL || '').trim().includes(todayStr)).length;
         const serverIzin = (window.siswaIzinData || []).filter(i => {
             const d = (i.TANGGAL || '').trim();
             return d.includes(todayStr);
@@ -1434,18 +1639,145 @@ document.addEventListener('DOMContentLoaded', () => {
         statIzinCount.innerText = todayCachedIzin + serverOnlyIzin.length;
     }
 
+    function showTodayIzinPopup() {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const cached = JSON.parse(localStorage.getItem('cached_siswa_izin') || '[]')
+            .filter(item => String(item.TANGGAL || '').trim().includes(todayStr));
+        const server = (window.siswaIzinData || [])
+            .filter(item => String(item.TANGGAL || '').trim().includes(todayStr));
+        const combined = [...cached];
+        server.forEach(item => {
+            if (!combined.some(existing => existing.NIS === item.NIS && existing.TANGGAL === item.TANGGAL)) {
+                combined.push(item);
+            }
+        });
+
+        const escapeHtml = value => String(value || '-').replace(/[&<>'"]/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[character]));
+        const message = combined.length === 0
+            ? '<p style="text-align: center; color: var(--text-muted);">Belum ada siswa izin hari ini.</p>'
+            : `<div style="max-height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem;">
+                ${combined.map((item, index) => `
+                    <div style="padding: 0.75rem; border: 1px solid #e2e8f0; border-left: 4px solid #f59e0b; border-radius: 10px; text-align: left; background: #fffbeb;">
+                        <div style="font-weight: 800; color: var(--text);">${index + 1}. ${escapeHtml(item.NAMA_SISWA)}</div>
+                        <div style="margin-top: 0.3rem; font-size: 0.8rem; color: var(--text-muted);">
+                            Kelas: <strong>${escapeHtml(item.KELAS)}</strong><br>
+                            Keterangan: <strong style="color: #d97706;">${escapeHtml(item.KETERANGAN)}</strong>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>`;
+
+        showAlert(`Siswa Izin Hari Ini (${combined.length})`, message, 'info');
+    }
+
+    function showFridayFirstPeriodData() {
+        if (!jumatPertamaContainer) return;
+        switchScreen('dashboard-screen', 'jumat-pertama-screen');
+        jumatPertamaContainer.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--text-muted);">Memuat dokumentasi Greenschool...</p>';
+
+        setTimeout(() => {
+            const cachedJurnals = JSON.parse(localStorage.getItem('cached_jurnals') || '[]');
+            const combined = [...jurnalData, ...cachedJurnals];
+            const seenKeys = new Set();
+            const targetJournals = combined.filter(journal => {
+                const key = [journal.TANGGAL, journal.JAM_KE || journal.JAM, journal.KELAS, journal.MAPEL].join('|');
+                if (seenKeys.has(key)) return false;
+                seenKeys.add(key);
+
+            const jam = String(journal.JAM_KE || journal.JAM || '')
+                .split(',')
+                .map(value => value.trim());
+            const mapel = String(journal.MAPEL || '').trim().toLowerCase();
+            const journalDate = String(journal.TANGGAL || '').trim();
+            const journalDay = journalDate ? new Date(`${journalDate}T00:00:00`).getDay() : -1;
+            return journalDay === 5 && jam.includes('1') &&
+                ['bimbingan kelas', 'green school', 'lainnya'].includes(mapel);
+            }).sort((a, b) => String(b.TANGGAL || '').localeCompare(String(a.TANGGAL || '')));
+
+            const studentsSource = studentsData.length > 0
+                ? studentsData
+                : JSON.parse(localStorage.getItem('cached_students') || '[]');
+            const classes = [...new Set(studentsSource.map(student => String(student.KELAS || '').trim()))]
+                .filter(Boolean)
+                .sort((a, b) => a.localeCompare(b));
+
+            if (classes.length === 0) {
+                jumatPertamaContainer.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--text-muted);">Data kelas belum tersedia.</p>';
+                return;
+            }
+
+        const getFileId = journal => {
+            const rawId = journal.FILE_ID_DRIVE || journal.FILE_ID || '';
+            if (rawId && rawId !== 'NOT FOUND' && !rawId.includes('LOCAL_CACHE')) return rawId.trim();
+            const rawDok = journal.DOKUMENTASI || journal.FILE || '';
+            const match = String(rawDok).match(/[-\w]{25,}/);
+            return match ? match[0] : '';
+        };
+        const escapeHtml = value => String(value || '-').replace(/[&<>'"]/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[character]));
+
+            jumatPertamaContainer.innerHTML = '';
+            classes.forEach(className => {
+                const classJournals = targetJournals.filter(journal => String(journal.KELAS || '').trim() === className);
+                const journal = classJournals[0];
+                const isFilled = Boolean(journal);
+                const fileId = journal ? getFileId(journal) : '';
+                const thumbUrl = journal && (journal.IS_CACHED ? journal.DOKUMENTASI : (fileId ? `https://lh3.googleusercontent.com/d/${fileId}=w600` : ''));
+                const card = document.createElement('div');
+                card.className = 'rekap-card';
+                card.style.cursor = 'pointer';
+                card.style.background = isFilled ? '#dcfce7' : '#fee2e2';
+                card.style.borderColor = isFilled ? '#86efac' : '#fca5a5';
+                card.innerHTML = isFilled ? `
+                    <div class="post-header">
+                        <div class="post-avatar">✅</div>
+                        <div class="post-user-info">
+                            <h5>${escapeHtml(className)} <span class="cache-badge">TERISI</span></h5>
+                            <p>${escapeHtml(journal.NAMA_GURU || 'Guru')} • ${escapeHtml(journal.HARI || 'JUMAT')}, ${escapeHtml(formatIndonesianDate(journal.TANGGAL))}</p>
+                        </div>
+                    </div>
+                    <div class="post-content">
+                        <h4 style="color: #166534; font-weight: 800; margin-bottom: 0.25rem;">${escapeHtml(journal.MAPEL)}</h4>
+                        <p style="font-size: 0.8rem; color: #166534;">Jam ${escapeHtml(journal.JAM_KE || journal.JAM || '1')} • Ruang ${escapeHtml(journal.RUANG)}</p>
+                        <p style="font-size: 0.875rem; color: var(--text); margin-top: 0.35rem;">${escapeHtml(journal.MATERI_PEMBELAJARAN || journal.MATERI)}</p>
+                    </div>
+                    ${thumbUrl ? `<div class="rekap-thumbnail" style="margin-top: 1rem;"><img src="${thumbUrl}" loading="lazy" alt="Dokumentasi ${escapeHtml(journal.MAPEL)}" style="width: 100%; display: block;"></div>` : ''}
+                ` : `
+                    <div class="post-header">
+                        <div class="post-avatar">⚠️</div>
+                        <div class="post-user-info">
+                            <h5>${escapeHtml(className)}</h5>
+                            <p style="color: #b91c1c; font-weight: 700;">Belum diisi</p>
+                        </div>
+                    </div>
+                    <div class="post-content">
+                        <p style="font-size: 0.8rem; color: #991b1b;">Belum ada input Bimbingan Kelas, Green School, atau Lainnya pada Jumat jam pertama.</p>
+                    </div>
+                `;
+                card.addEventListener('click', () => {
+                    if (journal) showJournalDetail(journal);
+                    else showAlert('Greenschool', `<p style="color: #b91c1c;">Kelas ${escapeHtml(className)} belum memiliki input Jumat jam pertama.</p>`, 'warning');
+                });
+                jumatPertamaContainer.appendChild(card);
+            });
+        }, 0);
+    }
+
     function showInfoPopup() {
-        const imgUrl = 'https://blogger.googleusercontent.com/img/a/AVvXsEhJzpOi5WnGDRvBi6ZkZtJhu5TnX8RssXHyZdH7efnR6vote-zdS9Q60goKxv2YzmRctUqWqZAzir6TeElEKvAPGKpifYArczJpb_6oUYuklcBhlIDjV4Cih4ffcTgtyC4bUpOsuqiFe8vkgltbHbUxVFduqg5b0aboygQH-t2M2F6Vu-XIAV1ur6KO-ng';
+        const imgUrl = 'https://blogger.googleusercontent.com/img/a/AVvXsEj0gidDMAxs79SkpgBW6-nRy7SLq7ytNTzeXSLp8-sX5SKhlCY7JHDHr7BNvJ9nTF8YgHbB_kubuvfYzX4t4ONGFDfoL2-AMa8mgK29o6XGebiHkSMgiO2BoXpv0fATKQ9XMf-RPWGbqrr_KQ1iVX3JeWYh9JGXR43QSWxyIa2o-qeJR9S0_8dxANpck08';
         const messageHtml = `
             <div style="display:flex;gap:0.75rem;align-items:center;">
-                <img src="${imgUrl}" style="width:379px;height:499px;object-fit:cover;border-radius:8px;border:2px solid var(--primary)">
+                <img src="${imgUrl}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:2px solid var(--primary)">
             </div>
             <div style="display:flex;flex-direction:column;">
-                    <div style="font-weight:800;color:#b71c1c;font-size:1.05rem">Indonesia Lebih Baik</div>
-                    <div style="margin-top:6px;color:var(--text-muted);">Indonesia Berdaulat, Adil, dan Makmur</div>
+                    <div style="font-weight:800;color:#1e3a8a;font-size:1.05rem">Persiapkan Dokumen Mengajar</div>
+                    <div style="margin-top:6px;color:var(--text-muted);">Hari ini belajar, besok bertumbuh.</div>
             </div>
         `;
-        showAlert('Dirgahayu Republik Indonesia ke 81 Tahun', messageHtml, 'info');
+        showAlert('Selamat Datang', messageHtml, 'info');
     }
 
     function startDigitalClock() {
@@ -2201,7 +2533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialIsDark = document.body.classList.contains('dark-mode');
     const themeMeta = document.querySelector('meta[name="theme-color"]');
     if (themeMeta) {
-        themeMeta.setAttribute('content', initialIsDark ? '#0f172a' : '#6366f1');
+        themeMeta.setAttribute('content', initialIsDark ? '#0f172a' : '#1e3a8a');
     }
 
     if (menuLiterasi) {
@@ -3252,6 +3584,364 @@ document.addEventListener('DOMContentLoaded', () => {
         renderRekapList();
         switchScreen('dashboard-screen', 'rekap-screen');
     });
+
+    if (menuJurnalHariIni) {
+        menuJurnalHariIni.addEventListener('click', () => {
+            renderJurnalHariIni();
+            switchScreen('dashboard-screen', 'jurnal-hari-ini-screen');
+        });
+    }
+
+    if (backFromJurnalHariIni) {
+        backFromJurnalHariIni.addEventListener('click', () => {
+            switchScreen('jurnal-hari-ini-screen', 'dashboard-screen');
+        });
+    }
+
+    function getTodayJournalEntries() {
+        const today = new Date().toLocaleDateString('en-CA');
+        const cached = JSON.parse(localStorage.getItem('cached_jurnals') || '[]');
+        const server = jurnalData || [];
+        const combined = [...server, ...cached];
+
+        return combined.filter((item) => {
+            const mapel = String(item.MAPEL || item.MATA_PELAJARAN || '').trim();
+            if (mapel === 'Presensi (Bimbingan Konseling)') return false;
+            const tanggal = String(item.TANGGAL || item.Tanggal || item.tanggal || '').trim();
+            return tanggal === today || tanggal.includes(today);
+        });
+    }
+
+    function renderJurnalHariIni() {
+        if (!jurnalHariIniContainer) return;
+
+        const entries = getTodayJournalEntries();
+        const grouped = new Map();
+
+        const normalizeTeacherName = (value) => {
+            if (!value) return '';
+            return String(value)
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[.,;:_/\\-]+/g, ' ')
+                .replace(/\b(S|M|Dr|Dra|Ir|Prof|H|KH)\b/gi, ' ')
+                .replace(/\s+/g, ' ')
+                .toUpperCase()
+                .trim();
+        };
+
+        const getTeacherNameCandidates = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) return [];
+            const normalized = normalizeTeacherName(raw);
+            const candidates = [normalized, normalized.split(',')[0], normalized.split(' ')[0]];
+            return [...new Set(candidates.filter(Boolean))];
+        };
+
+        // Helper function to get teacher profile data from actual app data sources
+        const getTeacherProfile = (guru) => {
+            try {
+                const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                const normalizedGuru = normalizeTeacherName(guru);
+                const guruCandidates = getTeacherNameCandidates(guru);
+
+                // Check if guru is current user
+                const userNameCandidates = getTeacherNameCandidates(userData.NAMA || userData.NAMA_GURU);
+                if (userNameCandidates.some(candidate => guruCandidates.includes(candidate))) {
+                    return userData;
+                }
+
+                const candidateSources = [];
+                if (Array.isArray(window.usersData)) candidateSources.push(window.usersData);
+                candidateSources.push(JSON.parse(localStorage.getItem('cached_users') || '[]'));
+                candidateSources.push(JSON.parse(localStorage.getItem('all_users') || '[]'));
+                candidateSources.push(JSON.parse(localStorage.getItem('teachers') || '[]'));
+
+                for (const source of candidateSources) {
+                    if (!Array.isArray(source)) continue;
+                    const found = source.find(u => {
+                        const nameCandidates = [
+                            u.NAMA,
+                            u.NAMA_GURU,
+                            u.GURU,
+                            u.NAME,
+                            u.name,
+                            u.nama,
+                            u.NAMA_GURU_BK,
+                            u.NAMA_GURU_YANG_TIDAK_HADIR
+                        ].flatMap((name) => {
+                            const values = getTeacherNameCandidates(name);
+                            const raw = String(name || '').trim();
+                            if (!raw) return values;
+                            const normalized = normalizeTeacherName(raw);
+                            return [...values, normalized, normalized.split(' ')[0], normalized.split(',')[0]];
+                        });
+
+                        return guruCandidates.some(candidate => 
+                            nameCandidates.includes(candidate) ||
+                            nameCandidates.some(name => name && name.includes(candidate)) ||
+                            candidate.includes(String(u.KODEGURU || u.KODE || u.KODE_GURU || '').replace(/[^A-Z0-9]/gi, '').toUpperCase())
+                        );
+                    });
+                    if (found) return found;
+                }
+
+                return null;
+            } catch (e) {
+                return null;
+            }
+        };
+
+        // Group by NAMA_GURU only (combine all classes of same teacher)
+        entries.forEach((item) => {
+            const guru = String(item.NAMA_GURU || item.NAMA || 'Guru').trim() || 'Guru';
+            
+            if (!grouped.has(guru)) {
+                const teacherProfile = getTeacherProfile(guru);
+                grouped.set(guru, {
+                    guru,
+                    kelas: new Set(),
+                    items: [],
+                    profile: teacherProfile,
+                    kodeGuru: String(
+                        teacherProfile?.KODEGURU ||
+                        teacherProfile?.KODE ||
+                        teacherProfile?.KODE_GURU ||
+                        teacherProfile?.['KODE GURU'] ||
+                        item.KODE_GURU ||
+                        item.KODEGURU ||
+                        item.KODE ||
+                        ''
+                    ).trim()
+                });
+            }
+            
+            const group = grouped.get(guru);
+            group.kelas.add(item.KELAS || 'Kelas');
+            group.items.push(item);
+            if (!group.kodeGuru) {
+                group.kodeGuru = String(
+                    group.profile?.KODEGURU ||
+                    group.profile?.KODE ||
+                    group.profile?.KODE_GURU ||
+                    group.profile?.['KODE GURU'] ||
+                    item.KODE_GURU ||
+                    item.KODEGURU ||
+                    item.KODE ||
+                    ''
+                ).trim();
+            }
+        });
+
+        const groups = Array.from(grouped.values());
+
+        if (!entries.length) {
+            jurnalHariIniContainer.innerHTML = `
+                <div style="text-align:center; color:var(--text-muted); padding: 2.5rem 1rem;">
+                    <div style="font-size: 2.8rem; margin-bottom: 0.75rem;">📭</div>
+                    <div style="font-weight: 700; font-size: 0.95rem;">Belum ada jurnal yang diisi hari ini</div>
+                </div>
+            `;
+            return;
+        }
+
+        const getTeacherFallbackCode = (profile, guruName = '', kodeGuru = '') => {
+            const code = String(
+                kodeGuru ||
+                profile?.KODEGURU ||
+                profile?.KODE ||
+                profile?.KODE_GURU ||
+                profile?.['KODE GURU'] ||
+                profile?.NIP ||
+                ''
+            ).trim();
+
+            if (code) {
+                const cleanCode = code.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+                return cleanCode.slice(0, 3) || 'G';
+            }
+
+            const name = String(guruName || profile?.NAMA || profile?.NAMA_GURU || 'Guru').trim();
+            if (!name) return 'G';
+            return name.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase() || 'G';
+        };
+
+        // Helper to get teacher profile photo
+        const getTeacherPhotoUrl = (profile) => {
+            if (!profile) return null;
+
+            const possibleFields = ['FOTO', 'PHOTO', 'PROFILE_PHOTO', 'PHOTO_PROFIL', 'IMAGE', 'AVATAR', 'FOTO_PROFIL', 'FOTO_PROFILE', 'PHOTO_PROFILE', 'PROFILE', 'PROFIL', 'PIC', 'PROFILE_URL', 'PHOTO_URL'];
+            for (const key of possibleFields) {
+                const value = profile[key];
+                if (value && typeof value === 'string' && value.trim()) {
+                    const normalized = normalizeAvatarPhoto(value.trim());
+                    if (normalized) return normalized;
+                }
+            }
+
+            const key = getProfilePhotoKey(profile);
+            const cachedPhoto = normalizeAvatarPhoto(localStorage.getItem(key));
+            if (cachedPhoto) return cachedPhoto;
+
+            return null;
+        };
+
+        const getPhotoUrl = (item) => {
+            const getFileId = (obj) => {
+                const rawIdDrive = obj.FILE_ID_DRIVE || obj.FILE_ID || '';
+                if (rawIdDrive && rawIdDrive !== "NOT FOUND" && !rawIdDrive.includes('LOCAL_CACHE')) return rawIdDrive.trim();
+                const rawDok = obj.DOKUMENTASI || obj.FILE || '';
+                if (!rawDok || rawDok.startsWith('data:image')) return '';
+                const idMatch = rawDok.match(/[-\w]{25,}/);
+                return idMatch ? idMatch[0] : '';
+            };
+            const fileId = getFileId(item);
+            const thumbUrl = item.IS_CACHED ? item.DOKUMENTASI : (fileId ? `https://lh3.googleusercontent.com/d/${fileId}=w600` : null);
+            const fallbackUrl = (!item.IS_CACHED && fileId) ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w600` : null;
+            return { thumbUrl, fallbackUrl };
+        };
+
+        const feedContainer = document.createElement('div');
+        feedContainer.className = 'instagram-feed-container';
+
+        groups.forEach((group, groupIdx) => {
+            const groupId = `group-${groupIdx}`;
+            const isMultiple = group.items.length > 1;
+
+            // Create post container
+            const postContainer = document.createElement('div');
+            postContainer.className = 'instagram-post';
+
+            // Get teacher photo and class list
+            const teacherPhotoUrl = getTeacherPhotoUrl(group.profile);
+            const classList = Array.from(group.kelas).join(', ');
+            const fallbackCode = getTeacherFallbackCode(group.profile, group.guru, group.kodeGuru);
+            
+            // Create avatar element
+            let avatarHtml = '';
+            if (teacherPhotoUrl && (teacherPhotoUrl.startsWith('data:image') || /^https?:\/\//i.test(teacherPhotoUrl))) {
+                avatarHtml = `<img src="${teacherPhotoUrl}" alt="${group.guru}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.parentElement.innerHTML = '<span style=\'font-size:1.35rem; font-weight:700; line-height:1;\'>👤</span>';"><\/img>`;
+            } else {
+                avatarHtml = `<span style="font-size:1.35rem; font-weight:700; line-height:1;">👤</span>`;
+            }
+
+            // Post header
+            const header = document.createElement('div');
+            header.className = 'instagram-post-header';
+            header.innerHTML = `
+                <div class="instagram-post-user">
+                    <div class="instagram-avatar" style="display:flex; align-items:center; justify-content:center; background:${teacherPhotoUrl ? 'transparent' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};">
+                        ${avatarHtml}
+                    </div>
+                    <div class="instagram-user-info">
+                        <div class="instagram-username">${group.guru}</div>
+                        <div class="instagram-user-meta">${classList}</div>
+                    </div>
+                </div>
+            `;
+
+            // Content carousel
+            const carousel = document.createElement('div');
+            carousel.className = 'instagram-carousel';
+            carousel.dataset.groupId = groupId;
+
+            const carouselTrack = document.createElement('div');
+            carouselTrack.className = 'instagram-carousel-track';
+
+            group.items.forEach((item, idx) => {
+                const slide = document.createElement('div');
+                slide.className = 'instagram-carousel-slide';
+                slide.dataset.index = idx;
+                
+                const { thumbUrl, fallbackUrl } = getPhotoUrl(item);
+                const photoHtml = thumbUrl ? `
+                    <div class="instagram-slide-photo">
+                        <div class="skeleton" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;"></div>
+                        <img src="${thumbUrl}" 
+                             data-fallback="${fallbackUrl || ''}" 
+                             alt="Dokumentasi"
+                             style="opacity: 0; transition: opacity 0.3s ease;"
+                             onload="this.style.opacity='1'; this.previousElementSibling && (this.previousElementSibling.style.display='none');"
+                             onerror="if(this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; } else { this.parentElement && (this.parentElement.style.display='none'); }">
+                    </div>
+                ` : '';
+                
+                slide.innerHTML = `
+                    ${photoHtml}
+                    <div class="instagram-slide-content">
+                        <div class="instagram-slide-header">
+                            <div class="instagram-slide-jam">Jam ${item.JAM_KE || item.JAM || '-'}</div>
+                        </div>
+                        <div class="instagram-slide-body">
+                            <div class="instagram-slide-mapel">${item.MAPEL || item.MATA_PELAJARAN || '-'}</div>
+                            <div class="instagram-slide-materi">${item.MATERI_PEMBELAJARAN || item.MATERI || 'Tidak ada materi'}</div>
+                        </div>
+                    </div>
+                `;
+                slide.addEventListener('click', () => {
+                    showJournalDetail(item);
+                });
+                carouselTrack.appendChild(slide);
+            });
+
+            carousel.appendChild(carouselTrack);
+
+            // Navigation controls if multiple items
+            if (isMultiple) {
+                const indicators = document.createElement('div');
+                indicators.className = 'instagram-carousel-indicators';
+                indicators.dataset.groupId = groupId;
+                for (let i = 0; i < group.items.length; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'instagram-carousel-dot' + (i === 0 ? ' active' : '');
+                    dot.dataset.index = i;
+                    dot.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        goToSlide(carouselTrack, i);
+                        updateIndicators(groupId);
+                    });
+                    indicators.appendChild(dot);
+                }
+                carousel.appendChild(indicators);
+            }
+
+            postContainer.appendChild(header);
+            postContainer.appendChild(carousel);
+            feedContainer.appendChild(postContainer);
+        });
+
+        jurnalHariIniContainer.innerHTML = '';
+        jurnalHariIniContainer.appendChild(feedContainer);
+    }
+
+    function scrollCarousel(track, direction) {
+        const slides = track.querySelectorAll('.instagram-carousel-slide');
+        const slideWidth = slides[0].offsetWidth;
+        const currentScroll = track.scrollLeft;
+        const targetScroll = currentScroll + (slideWidth * direction);
+        track.scrollTo({ left: targetScroll, behavior: 'smooth' });
+    }
+
+    function goToSlide(track, index) {
+        const slides = track.querySelectorAll('.instagram-carousel-slide');
+        const slideWidth = slides[0].offsetWidth;
+        track.scrollTo({ left: slideWidth * index, behavior: 'smooth' });
+    }
+
+    function updateIndicators(groupId) {
+        const indicators = document.querySelector(`.instagram-carousel-indicators[data-group-id="${groupId}"]`);
+        if (!indicators) return;
+
+        const carousel = document.querySelector(`[data-group-id="${groupId}"]`);
+        const track = carousel.querySelector('.instagram-carousel-track');
+        const slides = track.querySelectorAll('.instagram-carousel-slide');
+        const slideWidth = slides[0].offsetWidth;
+        const currentIndex = Math.round(track.scrollLeft / slideWidth);
+
+        indicators.querySelectorAll('.instagram-carousel-dot').forEach((dot, idx) => {
+            dot.classList.toggle('active', idx === currentIndex);
+        });
+    }
 
     let filteredEksporData = [];
     let currentTeacherName = '';
@@ -4459,6 +5149,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (menuJumatPertama) {
+        menuJumatPertama.addEventListener('click', showFridayFirstPeriodData);
+    }
+
+    if (backFromJumatPertama) {
+        backFromJumatPertama.addEventListener('click', () => {
+            switchScreen('jumat-pertama-screen', 'dashboard-screen');
+        });
+    }
+
     if (backFromSettings) {
         backFromSettings.addEventListener('click', () => {
             switchScreen('settings-screen', 'dashboard-screen');
@@ -4545,6 +5245,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (todayIzinStat) {
+        todayIzinStat.addEventListener('click', () => {
+            showTodayIzinPopup();
+        });
+    }
+
     if (backFromIzinList) {
         backFromIzinList.addEventListener('click', () => {
             switchScreen('siswa-izin-list-screen', 'dashboard-screen');
@@ -4594,8 +5300,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return dbDate.includes(todayStr); // Only show today's server data
         });
 
-        // Combine local cached and server data (avoid duplicates based on NIS and Date)
-        const combined = [...cached];
+        // Combine only today's local and server data (avoid duplicates based on NIS and date)
+        const todayCached = cached.filter(item => String(item.TANGGAL || '').trim().includes(todayStr));
+        const combined = [...todayCached];
         serverData.forEach(sd => {
             const exists = combined.find(c => c.NIS === sd.NIS && c.TANGGAL === sd.TANGGAL);
             if (!exists) combined.push(sd);
@@ -4976,21 +5683,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Handle Logout
-    logoutBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
+    function performLogout() {
         // Clear Session
         localStorage.removeItem('isLoggedIn');
 
-        dashboardScreen.classList.remove('active');
-        dashboardScreen.classList.add('hidden');
-        profileDropdown.classList.add('hidden');
+        const currentActive = document.querySelector('.screen.active');
+        if (currentActive) {
+            currentActive.classList.remove('active');
+            currentActive.classList.add('hidden');
+        }
+        if (profileDropdown) profileDropdown.classList.add('hidden');
+
+        const bottomNav = document.getElementById('bottom-nav');
+        if (bottomNav) bottomNav.classList.add('hidden');
 
         loginScreen.classList.remove('hidden');
         loginScreen.classList.add('active');
 
         // Clear form fields
         loginForm.reset();
+    }
+
+    logoutBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        performLogout();
     });
+
+    if (btnSignOutProfile) {
+        btnSignOutProfile.addEventListener('click', () => {
+            performLogout();
+        });
+    }
 
     // Profile Dropdown Logic
     avatarBtn?.addEventListener('click', (e) => {
@@ -5144,6 +5867,194 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('❌ Gagal sync password:', err);
         }
     }
+
+    // ---------------- Bottom Navigation Bar Wiring ----------------
+    function routeToScreen(targetId) {
+        try {
+            const current = document.querySelector('.screen.active');
+            console.log('routeToScreen', { targetId, current: current && current.id });
+            if (!current || current.id === targetId) return;
+
+            const targetKey = BOTTOM_NAV_SCREENS[targetId] || null;
+
+            if (targetId === 'dashboard-screen') {
+                switchScreen(current.id, 'dashboard-screen');
+                return;
+            }
+
+            if (targetId === 'rekap-screen') {
+                if (typeof window.refreshBackgroundData === 'function') window.refreshBackgroundData();
+                renderRekapList();
+            }
+            if (targetId === 'jurnal-hari-ini-screen') {
+                if (typeof window.refreshBackgroundData === 'function') window.refreshBackgroundData();
+                if (typeof renderJurnalHariIni === 'function') renderJurnalHariIni();
+            }
+            if (targetId === 'journal-form-screen') {
+                if (typeof window.refreshBackgroundData === 'function') window.refreshBackgroundData();
+                isEditMode = false;
+                currentEditingId = null;
+                currentJournalEditData = null;
+                initJournalForm();
+            }
+            if (targetId === 'teacher-profile-screen') {
+                profileDropdown.classList.remove('active');
+                showTeacherProfile();
+            }
+
+            if (targetKey) {
+                setActiveNavItem(targetKey);
+            }
+            switchScreen(current.id, targetId);
+        } catch (e) {
+            console.error('routeToScreen error', e);
+        }
+    }
+
+    window.routeToScreen = routeToScreen;
+
+    const navHome = document.getElementById('nav-home');
+    const navAktifitas = document.getElementById('nav-aktifitas');
+    const navIsiJurnal = document.getElementById('nav-isi-jurnal');
+    const navSetelan = document.getElementById('nav-setelan');
+    const navProfil = document.getElementById('nav-profil');
+
+    if (navHome) navHome.addEventListener('click', () => routeToScreen('dashboard-screen'));
+    if (navAktifitas) navAktifitas.addEventListener('click', () => routeToScreen('jurnal-hari-ini-screen'));
+    if (navIsiJurnal) navIsiJurnal.addEventListener('click', () => routeToScreen('journal-form-screen'));
+    if (navSetelan) navSetelan.addEventListener('click', () => routeToScreen('settings-screen'));
+    if (navProfil) navProfil.addEventListener('click', () => routeToScreen('teacher-profile-screen'));
+
+    // ---------------- Menu Utama Grid + Horizontal Paging ----------------
+    // Menu ditampilkan dalam grid 4x2 per halaman, lalu bisa digeser secara
+    // horizontal bila jumlah menu melebihi satu halaman.
+    (function initMenuCarousel() {
+        const viewport = document.getElementById('menu-carousel-viewport');
+        const track = document.getElementById('menu-carousel-track');
+        const dotsContainer = document.getElementById('menu-carousel-dots');
+        if (!viewport || !track || !dotsContainer) return;
+
+        const allItems = Array.from(track.querySelectorAll('.menu-slide-item'));
+        if (allItems.length === 0) return;
+
+        let currentPageIndex = 0;
+
+        function computeVisible() {
+            return allItems.filter((item) => {
+                if (item.style.display === 'none') return false;
+                return window.getComputedStyle(item).display !== 'none';
+            });
+        }
+
+        function buildPages(visibleItems) {
+            const pages = [];
+            for (let i = 0; i < visibleItems.length; i += 8) {
+                const page = document.createElement('div');
+                page.className = 'menu-slide-page';
+                const chunk = visibleItems.slice(i, i + 8);
+                chunk.forEach((item) => page.appendChild(item));
+                pages.push(page);
+            }
+            return pages;
+        }
+
+        function syncDots() {
+            const dots = dotsContainer.querySelectorAll('.dot');
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentPageIndex);
+            });
+        }
+
+        function rebuildDots(totalPages) {
+            dotsContainer.innerHTML = '';
+            if (totalPages <= 1) {
+                dotsContainer.style.display = 'none';
+                return;
+            }
+
+            dotsContainer.style.display = 'flex';
+            for (let i = 0; i < totalPages; i++) {
+                const dot = document.createElement('button');
+                dot.type = 'button';
+                dot.className = 'dot';
+                dot.setAttribute('aria-label', `Pindah ke halaman ${i + 1}`);
+                dot.addEventListener('click', () => {
+                    const pages = track.querySelectorAll('.menu-slide-page');
+                    const targetPage = pages[i];
+                    if (!targetPage) return;
+                    viewport.scrollTo({ left: targetPage.offsetLeft, behavior: 'smooth' });
+                    currentPageIndex = i;
+                    syncDots();
+                });
+                dotsContainer.appendChild(dot);
+            }
+            syncDots();
+        }
+
+        function refresh() {
+            const visibleItems = computeVisible();
+            if (visibleItems.length === 0) return;
+
+            const existingPages = Array.from(track.querySelectorAll('.menu-slide-page'));
+            existingPages.forEach((page) => page.remove());
+
+            const pages = buildPages(visibleItems);
+            pages.forEach((page) => track.appendChild(page));
+
+            const maxPageIndex = Math.max(pages.length - 1, 0);
+            currentPageIndex = Math.min(currentPageIndex, maxPageIndex);
+            rebuildDots(pages.length);
+
+            const activePage = pages[currentPageIndex];
+            if (activePage) {
+                viewport.scrollLeft = activePage.offsetLeft;
+            }
+            syncDots();
+        }
+
+        viewport.addEventListener('scroll', () => {
+            const pages = track.querySelectorAll('.menu-slide-page');
+            if (!pages.length) return;
+
+            const pageWidth = viewport.clientWidth || 1;
+            const nextIndex = Math.min(
+                Math.max(Math.round(viewport.scrollLeft / pageWidth), 0),
+                pages.length - 1
+            );
+
+            if (nextIndex !== currentPageIndex) {
+                currentPageIndex = nextIndex;
+                syncDots();
+            }
+        }, { passive: true });
+
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const pages = track.querySelectorAll('.menu-slide-page');
+                if (!pages.length) return;
+                const clampedIndex = Math.min(currentPageIndex, pages.length - 1);
+                currentPageIndex = clampedIndex;
+                viewport.scrollLeft = pages[clampedIndex].offsetLeft;
+                syncDots();
+            }, 120);
+        });
+
+        let refreshQueued = false;
+        const observer = new MutationObserver(() => {
+            if (refreshQueued) return;
+            refreshQueued = true;
+            requestAnimationFrame(() => {
+                refreshQueued = false;
+                refresh();
+            });
+        });
+
+        allItems.forEach((item) => observer.observe(item, { attributes: true, attributeFilter: ['style'] }));
+
+        refresh();
+    })();
 
     function updateOnlineStatus() {
         const statusBadge = document.getElementById('online-status-badge');
