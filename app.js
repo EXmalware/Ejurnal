@@ -1453,7 +1453,18 @@ document.addEventListener('DOMContentLoaded', () => {
             );
             if (!exists) combined.push(c);
         });
-        const totalEntries = combined.length;
+
+        // Hitung hanya entri pada bulan & tahun berjalan (TANGGAL format: YYYY-MM-DD)
+        const dashNow = new Date();
+        const dashCurrentYear = String(dashNow.getFullYear());
+        const dashCurrentMonth = String(dashNow.getMonth() + 1).padStart(2, '0');
+        const monthlyEntries = combined.filter(j => {
+            if (!j.TANGGAL) return false;
+            const parts = String(j.TANGGAL).split('-'); // [YYYY, MM, DD]
+            if (parts.length < 2) return false;
+            return parts[0] === dashCurrentYear && parts[1] === dashCurrentMonth;
+        });
+        const totalEntries = monthlyEntries.length;
 
         const summaryText = document.getElementById('journal-summary-text');
         const percentDiv = document.getElementById('journal-completion-percent');
@@ -2170,8 +2181,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    function showJournalDetail(j) {
+    function showJournalDetail(j, options = {}) {
+        const readOnly = !!options.readOnly;
         modalJournalTitle.innerText = `Detail Jurnal - ${j.KELAS || ''}`;
+
+        // Sembunyikan tombol Edit ketika dibuka dari mode lihat saja
+        // (mis. dari Aktifitas / Jurnal Hari Ini), supaya hanya bisa dilihat.
+        if (editJournalBtn) {
+            editJournalBtn.style.display = readOnly ? 'none' : '';
+        }
 
         const getFileId = (obj) => {
             const rawIdDrive = obj.FILE_ID_DRIVE || obj.FILE_ID || '';
@@ -3602,7 +3620,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date().toLocaleDateString('en-CA');
         const cached = JSON.parse(localStorage.getItem('cached_jurnals') || '[]');
         const server = jurnalData || [];
-        const combined = [...server, ...cached];
+
+        // `server` datang dari Google Sheet dalam urutan baris (lama -> baru),
+        // sedangkan `cached` sudah tersusun baru -> lama (unshift saat disimpan).
+        // Supaya hasil akhirnya konsisten "terbaru dulu", server dibalik urutannya
+        // lalu ditaruh setelah cached (karena entri cache selalu lebih baru,
+        // menunggu sinkronisasi ke server).
+        const combined = [...cached, ...server.slice().reverse()];
 
         return combined.filter((item) => {
             const mapel = String(item.MAPEL || item.MATA_PELAJARAN || '').trim();
@@ -3879,7 +3903,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
                 slide.addEventListener('click', () => {
-                    showJournalDetail(item);
+                    // Dibuka dari Aktifitas / Jurnal Hari Ini: mode lihat saja, tidak bisa edit
+                    showJournalDetail(item, { readOnly: true });
                 });
                 carouselTrack.appendChild(slide);
             });
