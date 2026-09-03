@@ -1691,6 +1691,11 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             const cachedJurnals = JSON.parse(localStorage.getItem('cached_jurnals') || '[]');
             const combined = [...jurnalData, ...cachedJurnals];
+
+            // Tanggal hari ini dalam WIB (UTC+7), tidak tergantung timezone perangkat
+            const wibNow = new Date(Date.now() + 7 * 60 * 60000);
+            const todayISO = wibNow.toISOString().split('T')[0];
+
             const seenKeys = new Set();
             const targetJournals = combined.filter(journal => {
                 const key = [journal.TANGGAL, journal.JAM_KE || journal.JAM, journal.KELAS, journal.MAPEL].join('|');
@@ -1699,12 +1704,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const jam = String(journal.JAM_KE || journal.JAM || '')
                 .split(',')
-                .map(value => value.trim());
-            const mapel = String(journal.MAPEL || '').trim().toLowerCase();
-            const journalDate = String(journal.TANGGAL || '').trim();
-            const journalDay = journalDate ? new Date(`${journalDate}T00:00:00`).getDay() : -1;
-            return journalDay === 5 && jam.includes('1') &&
-                ['bimbingan kelas', 'green school', 'lainnya'].includes(mapel);
+                .map(value => value.trim().replace(/^'+/, ''));
+            const mapel = String(journal.MAPEL || '').trim().toLowerCase().replace(/\s+/g, ' ');
+            const rawTanggal = String(journal.TANGGAL || '').trim();
+            let journalDate = rawTanggal;
+            if (rawTanggal.includes('Date(')) {
+                // GViz date format from Google Sheets, e.g. "Date(2026,8,4)"
+                const parts = rawTanggal.match(/\d+/g);
+                if (parts && parts.length >= 3) {
+                    journalDate = `${parts[0]}-${String(parseInt(parts[1], 10) + 1).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
+                }
+            } else if (rawTanggal.includes('/')) {
+                // DD/MM/YYYY format
+                const p = rawTanggal.split('/');
+                if (p.length === 3 && p[2].length === 4) {
+                    journalDate = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                }
+            }
+            const isGreenSchoolMapel = ['bimbingan kelas', 'green school', 'lainnya'].some(keyword => mapel.includes(keyword));
+            return journalDate === todayISO && jam.includes('1') && isGreenSchoolMapel;
             }).sort((a, b) => String(b.TANGGAL || '').localeCompare(String(a.TANGGAL || '')));
 
             const studentsSource = studentsData.length > 0
@@ -1732,7 +1750,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             jumatPertamaContainer.innerHTML = '';
             classes.forEach(className => {
-                const classJournals = targetJournals.filter(journal => String(journal.KELAS || '').trim() === className);
+                const classJournals = targetJournals.filter(journal =>
+                    String(journal.KELAS || '').trim().toUpperCase() === className.toUpperCase()
+                );
                 const journal = classJournals[0];
                 const isFilled = Boolean(journal);
                 const fileId = journal ? getFileId(journal) : '';
@@ -1769,8 +1789,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
                 card.addEventListener('click', () => {
-                    if (journal) showJournalDetail(journal);
-                    else showAlert('Greenschool', `<p style="color: #b91c1c;">Kelas ${escapeHtml(className)} belum memiliki input Jumat jam pertama.</p>`, 'warning');
+                    if (journal) {
+                        const currentUser = JSON.parse(localStorage.getItem('userData') || '{}');
+                        const currentUserName = (currentUser.NAMA || '').toUpperCase().trim();
+                        const journalOwnerName = String(journal.NAMA_GURU || '').toUpperCase().trim();
+                        const isOwnEntry = currentUserName && journalOwnerName === currentUserName;
+                        showJournalDetail(journal, { readOnly: !isOwnEntry });
+                    } else {
+                        showAlert('Greenschool', `<p style="color: #b91c1c;">Kelas ${escapeHtml(className)} belum memiliki input Jumat jam pertama.</p>`, 'warning');
+                    }
                 });
                 jumatPertamaContainer.appendChild(card);
             });
@@ -3062,8 +3089,8 @@ document.addEventListener('DOMContentLoaded', () => {
             journalEntryForm.querySelector('button[type="submit"]').innerText = 'Simpan Jurnal';
 
             const now = new Date();
-            const offset = 7 * 60;
-            const localTime = new Date(now.getTime() + (now.getTimezoneOffset() + offset) * 60000);
+            const wibOffsetMinutes = 7 * 60;
+            const localTime = new Date(now.getTime() + wibOffsetMinutes * 60000);
             const isoDate = localTime.toISOString().split('T')[0];
 
             inputTanggalRaw.value = isoDate;

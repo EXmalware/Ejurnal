@@ -219,7 +219,7 @@ async function generateJurnalPDF(data, teacherName, dokData = []) {
             doc.setTextColor(100, 100, 100);
 
             // Footer text
-            doc.text('Data diambil dari aplikasi E-Jurnal V 4.0.0 copyright 2026', margin, pageHeight - 8);
+            doc.text('Data diambil dari aplikasi E-Jurnal V 4.0.2 copyright 2026', margin, pageHeight - 8);
 
             // Page number
             doc.text(`${currentPage}`, pageWidth - margin - 5, pageHeight - 8, { align: 'right' });
