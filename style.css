@@ -1690,7 +1690,17 @@ body {
 #ekspor-screen,
 #settings-screen,
 #teacher-profile-screen,
-#journal-form-screen {
+#journal-form-screen,
+#students-screen,
+#student-detail-screen,
+#siswa-izin-list-screen,
+#siswa-izin-screen,
+#sitatib-screen {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom)) !important;
+}
+
+#class-list-container,
+#student-list-container {
     padding-bottom: calc(6rem + env(safe-area-inset-bottom)) !important;
 }
 

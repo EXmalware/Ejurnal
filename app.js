@@ -667,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // In-memory canvas for native camera photo processing
     const cameraCanvas = document.createElement('canvas');
     let usersData = JSON.parse(localStorage.getItem('cached_users') || '[]');
-    let studentsData = [];
+    let studentsData = JSON.parse(localStorage.getItem('cached_students') || '[]');
     let roomsData = [];
     let subjectsData = [];
     let jurnalData = [];
@@ -820,6 +820,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.handleStudentResponse = (response) => {
         studentsData = parseGviz(response);
+        localStorage.setItem('cached_students', JSON.stringify(studentsData));
         if (pendingStudentAttendanceRefresh) {
             if (selectKelas && selectKelas.value === pendingStudentAttendanceRefresh) {
                 renderStudentAttendanceList(selectKelas.value, currentJournalEditData);
@@ -827,6 +828,18 @@ document.addEventListener('DOMContentLoaded', () => {
             pendingStudentAttendanceRefresh = '';
         }
     };
+
+    function getStudentsSource() {
+        if (studentsData && studentsData.length) {
+            return studentsData;
+        }
+        try {
+            return JSON.parse(localStorage.getItem('cached_students') || '[]');
+        } catch (error) {
+            console.warn('Gagal membaca cache siswa:', error);
+            return [];
+        }
+    }
 
     window.handleRoomResponse = (response) => {
         roomsData = parseGviz(response);
@@ -1293,6 +1306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'dashboard-screen': 'home',
         'students-screen': 'home',
         'student-detail-screen': 'home',
+        'sitatib-screen': 'home',
         'journal-form-screen': 'isi-jurnal',
         'jurnal-hari-ini-screen': 'aktifitas',
         'rekap-screen': null,
@@ -1958,6 +1972,23 @@ document.addEventListener('DOMContentLoaded', () => {
         switchScreen('dashboard-screen', 'students-screen');
     });
 
+    const menuSitatib = document.getElementById('menu-sitatib');
+    const sitatibFrame = document.getElementById('sitatib-frame');
+    const backFromSitatib = document.getElementById('back-from-sitatib');
+    if (menuSitatib) {
+        menuSitatib.addEventListener('click', () => {
+            if (sitatibFrame && !sitatibFrame.src) {
+                sitatibFrame.src = 'https://script.google.com/macros/s/AKfycbz1RXKlaI1TN3VVv_8g4Dqo3nPpvqsprnHcX5X4ubU4GObYoV_FXGrgEdHVCCuRXHq_ng/exec';
+            }
+            switchScreen('dashboard-screen', 'sitatib-screen');
+        });
+    }
+    if (backFromSitatib) {
+        backFromSitatib.addEventListener('click', () => {
+            switchScreen('sitatib-screen', 'dashboard-screen');
+        });
+    }
+
 
 
     backFromStudents.addEventListener('click', () => {
@@ -1976,8 +2007,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderClassList(filter = '') {
         classListContainer.innerHTML = '';
 
+        const studentsSource = getStudentsSource();
         const groups = {};
-        studentsData.forEach(student => {
+        studentsSource.forEach(student => {
             const className = student.KELAS || 'Tanpa Kelas';
             if (!groups[className]) groups[className] = [];
             groups[className].push(student);
