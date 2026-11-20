@@ -600,6 +600,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const literasiCapturedImg = document.getElementById('literasi-captured-img');
     const literasiPhotoPlaceholder = document.getElementById('literasi-photo-placeholder');
     const retakePhotoLiterasi = document.getElementById('retake-photo-literasi');
+    const btnFilterPdfLiterasi = document.getElementById('btn-filter-pdf-literasi');
+    const literasiPdfScreen = document.getElementById('literasi-pdf-screen');
+    const backFromLiterasiPdf = document.getElementById('back-from-literasi-pdf');
+    const literasiPdfFilterBulan = document.getElementById('literasi-pdf-filter-bulan');
+    const literasiPdfFilterTahun = document.getElementById('literasi-pdf-filter-tahun');
+    const btnTerapkanFilterLiterasiPdf = document.getElementById('btn-terapkan-filter-literasi-pdf');
+    const literasiPdfPreview = document.getElementById('literasi-pdf-preview');
+    const btnDownloadPdfLiterasi = document.getElementById('btn-download-pdf-literasi');
 
     // Piket Elements
     const menuPiket = document.getElementById('menu-piket');
@@ -684,6 +692,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentJournalEditData = null;
     let capturedPhotoData = null;
     let literasiCapturedPhotoData = null;
+    let filteredLiterasiPdfData = [];
+    let currentLiterasiTeacherName = '';
     let izinCapturedPhotoData = null;
     let currentCameraTarget = 'journal';
 
@@ -2642,6 +2652,153 @@ document.addEventListener('DOMContentLoaded', () => {
     if (backFromLiterasiForm) {
         backFromLiterasiForm.addEventListener('click', () => {
             switchScreen('literasi-form-screen', 'literasi-rekap-screen');
+        });
+    }
+
+    if (btnFilterPdfLiterasi) {
+        btnFilterPdfLiterasi.addEventListener('click', () => {
+            if (typeof window.refreshBackgroundData === 'function') window.refreshBackgroundData();
+
+            const currentYear = new Date().getFullYear();
+            if (literasiPdfFilterTahun) {
+                literasiPdfFilterTahun.innerHTML = `
+                    <option value="${currentYear}">${currentYear}</option>
+                    <option value="${currentYear - 1}">${currentYear - 1}</option>
+                `;
+            }
+            if (literasiPdfFilterBulan) {
+                literasiPdfFilterBulan.value = String(new Date().getMonth() + 1).padStart(2, '0');
+            }
+            if (literasiPdfPreview) {
+                literasiPdfPreview.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">Pilih filter dan terapkan untuk melihat data.</p>';
+            }
+            if (btnDownloadPdfLiterasi) btnDownloadPdfLiterasi.style.display = 'none';
+            filteredLiterasiPdfData = [];
+            switchScreen('literasi-rekap-screen', 'literasi-pdf-screen');
+        });
+    }
+
+    if (backFromLiterasiPdf) {
+        backFromLiterasiPdf.addEventListener('click', () => {
+            switchScreen('literasi-pdf-screen', 'literasi-rekap-screen');
+        });
+    }
+
+    if (btnTerapkanFilterLiterasiPdf) {
+        btnTerapkanFilterLiterasiPdf.addEventListener('click', () => {
+            const savedUser = JSON.parse(localStorage.getItem('userData') || '{}');
+            currentLiterasiTeacherName = String(savedUser.NAMA || '').toUpperCase().trim();
+            if (!currentLiterasiTeacherName) {
+                showToast('❌ Anda belum login', 'error');
+                return;
+            }
+
+            const selectedBulan = literasiPdfFilterBulan ? literasiPdfFilterBulan.value : '';
+            const selectedTahun = literasiPdfFilterTahun ? literasiPdfFilterTahun.value : '';
+
+            btnTerapkanFilterLiterasiPdf.disabled = true;
+            btnTerapkanFilterLiterasiPdf.innerText = '⌛ Memproses...';
+
+            setTimeout(() => {
+                const normalizeDate = (value) => {
+                    if (!value || typeof value !== 'string') return '';
+                    if (value.includes('-')) return value.substring(0, 10);
+                    if (value.includes('/')) {
+                        const parts = value.split('/');
+                        if (parts.length === 3) {
+                            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                        }
+                    }
+                    return value;
+                };
+
+                const server = (literasiData || []).filter(row => {
+                    const dbNama = String(getVal(row, ['NAMA', 'GURU']) || '').toUpperCase().trim();
+                    return dbNama.includes(currentLiterasiTeacherName);
+                });
+                const cached = JSON.parse(localStorage.getItem('cached_literasi') || '[]');
+
+                const combined = [...server];
+                cached.forEach(cachedRow => {
+                    const cachedDate = normalizeDate(getVal(cachedRow, ['TANGGAL', 'Tanggal']));
+                    const cachedClass = getVal(cachedRow, ['KELAS', 'Kelas']);
+                    const cachedRoom = getVal(cachedRow, ['RUANG', 'Ruang']);
+                    const exists = combined.find(serverRow =>
+                        normalizeDate(getVal(serverRow, ['TANGGAL', 'Tanggal'])) === cachedDate &&
+                        getVal(serverRow, ['KELAS', 'Kelas']) === cachedClass &&
+                        getVal(serverRow, ['RUANG', 'Ruang']) === cachedRoom
+                    );
+                    if (!exists) combined.push(cachedRow);
+                });
+
+                filteredLiterasiPdfData = combined.filter(row => {
+                    const dateStr = normalizeDate(getVal(row, ['TANGGAL', 'Tanggal', 'tanggal']));
+                    const parts = dateStr.split('-');
+                    return parts.length === 3 && parts[0] === selectedTahun && parts[1] === selectedBulan;
+                }).sort((a, b) =>
+                    new Date(normalizeDate(getVal(b, ['TANGGAL', 'Tanggal']))) -
+                    new Date(normalizeDate(getVal(a, ['TANGGAL', 'Tanggal'])))
+                );
+
+                if (filteredLiterasiPdfData.length === 0) {
+                    literasiPdfPreview.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">Tidak ada data literasi pada bulan dan tahun ini.</p>';
+                    btnDownloadPdfLiterasi.style.display = 'none';
+                } else {
+                    let tableHTML = `
+                        <table style="width: 100%; min-width: 620px; border-collapse: collapse; text-align: left;">
+                            <thead><tr style="background: var(--primary); color: white;">
+                                <th style="padding: 0.5rem; border: 1px solid #e2e8f0;">No</th>
+                                <th style="padding: 0.5rem; border: 1px solid #e2e8f0;">Tanggal</th>
+                                <th style="padding: 0.5rem; border: 1px solid #e2e8f0;">Kelas</th>
+                                <th style="padding: 0.5rem; border: 1px solid #e2e8f0;">Ruang</th>
+                                <th style="padding: 0.5rem; border: 1px solid #e2e8f0;">Kegiatan</th>
+                            </tr></thead><tbody>`;
+
+                    filteredLiterasiPdfData.forEach((row, index) => {
+                        const tanggal = getVal(row, ['TANGGAL', 'Tanggal', 'tanggal']) || '-';
+                        const kelas = getVal(row, ['KELAS', 'Kelas', 'kelas']) || '-';
+                        const ruang = getVal(row, ['RUANG', 'Ruang', 'ruang']) || '-';
+                        const kegiatan = getVal(row, ['KEGIATAN', 'LITERASI', 'Kegiatan']) || '-';
+                        tableHTML += `<tr style="background: ${index % 2 === 0 ? 'white' : '#f8fafc'};">
+                            <td style="padding: 0.5rem; border: 1px solid #e2e8f0; text-align: center;">${index + 1}</td>
+                            <td style="padding: 0.5rem; border: 1px solid #e2e8f0;">${tanggal}</td>
+                            <td style="padding: 0.5rem; border: 1px solid #e2e8f0; text-align: center;">${kelas}</td>
+                            <td style="padding: 0.5rem; border: 1px solid #e2e8f0;">${ruang}</td>
+                            <td style="padding: 0.5rem; border: 1px solid #e2e8f0;">${kegiatan}</td>
+                        </tr>`;
+                    });
+
+                    tableHTML += '</tbody></table>';
+                    literasiPdfPreview.innerHTML = tableHTML;
+                    btnDownloadPdfLiterasi.style.display = 'block';
+                }
+
+                btnTerapkanFilterLiterasiPdf.disabled = false;
+                btnTerapkanFilterLiterasiPdf.innerText = '🔍 Terapkan Filter';
+                showToast('✅ Filter literasi diterapkan', 'success');
+            }, 500);
+        });
+    }
+
+    if (btnDownloadPdfLiterasi) {
+        btnDownloadPdfLiterasi.addEventListener('click', async () => {
+            if (filteredLiterasiPdfData.length === 0) {
+                showToast('❌ Tidak ada data literasi untuk diekspor', 'error');
+                return;
+            }
+
+            btnDownloadPdfLiterasi.disabled = true;
+            btnDownloadPdfLiterasi.innerText = '⌛ Menyiapkan PDF Literasi...';
+            try {
+                if (typeof generateLiterasiPDF !== 'function') throw new Error('Fungsi PDF Literasi belum termuat');
+                await generateLiterasiPDF(filteredLiterasiPdfData, currentLiterasiTeacherName, dokData);
+            } catch (err) {
+                console.error('Error generating Literasi PDF:', err);
+                showAlert('❌ Gagal', 'Gagal memproses PDF Literasi: ' + err.message, 'error');
+            } finally {
+                btnDownloadPdfLiterasi.disabled = false;
+                btnDownloadPdfLiterasi.innerText = '📄 Unduh PDF Literasi';
+            }
         });
     }
 

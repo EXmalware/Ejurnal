@@ -827,3 +827,162 @@ function generateLaporanSemesterPDF(kelas, semesterType, tahun, reportData, mape
 
 window.generateLaporanKehadiranPDF = generateLaporanKehadiranPDF;
 window.generateLaporanSemesterPDF = generateLaporanSemesterPDF;
+
+async function generateLiterasiPDF(data, teacherName, dokData = []) {
+    if (!window.jspdf) throw new Error('jsPDF library not loaded');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 12;
+
+    const getVal = (obj, keys) => {
+        if (!obj) return '';
+        const objectKeys = Object.keys(obj);
+        for (const key of keys) {
+            if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') return obj[key];
+            const found = objectKeys.find(objectKey =>
+                objectKey.toUpperCase() === key.toUpperCase() ||
+                objectKey.toUpperCase().startsWith(key.toUpperCase())
+            );
+            if (found && obj[found] !== undefined && obj[found] !== null) return obj[found];
+        }
+        return '';
+    };
+
+    const getDokValue = (keyword, field) => {
+        const found = (dokData || []).find(item => {
+            const category = String(getVal(item, ['KATEGORI', 'Kategori']) || '').toUpperCase();
+            return category.includes(keyword);
+        });
+        return found ? getVal(found, [field]) : '';
+    };
+
+    const now = new Date();
+    const firstDate = getVal(data[0] || {}, ['TANGGAL', 'Tanggal', 'tanggal']);
+    const dateParts = String(firstDate).includes('-')
+        ? String(firstDate).split('-')
+        : [];
+    const monthNames = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
+    const monthName = dateParts.length >= 2 ? monthNames[Number(dateParts[1]) - 1] || '-' : '-';
+    const yearName = dateParts.length >= 1 ? dateParts[0] : String(now.getFullYear());
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('REKAP KEGIATAN LITERASI PAGI', pageWidth / 2, margin + 8, { align: 'center' });
+    doc.setFontSize(11);
+    doc.text(`BULAN ${monthName} ${yearName}`, pageWidth / 2, margin + 15, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Guru: ${teacherName}`, margin, margin + 24);
+    doc.text(`Tanggal Cetak: ${now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, pageWidth - margin, margin + 24, { align: 'right' });
+
+    const tableBody = data.map((row, index) => [
+        String(index + 1),
+        getVal(row, ['TANGGAL', 'Tanggal']) || '-',
+        getVal(row, ['HARI']) || '-',
+        getVal(row, ['KELAS', 'Kelas']) || '-',
+        getVal(row, ['RUANG', 'Ruang']) || '-',
+        getVal(row, ['KEGIATAN', 'LITERASI', 'Kegiatan']) || '-'
+    ]);
+
+    doc.autoTable({
+        startY: margin + 30,
+        head: [['No', 'Tanggal', 'Hari', 'Kelas', 'Ruang', 'Detail Kegiatan Literasi']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2, valign: 'middle' },
+        headStyles: { fillColor: [30, 58, 138], textColor: 255, halign: 'center' },
+        columnStyles: {
+            0: { halign: 'center', cellWidth: 10 },
+            1: { halign: 'center', cellWidth: 25 },
+            2: { halign: 'center', cellWidth: 20 },
+            3: { halign: 'center', cellWidth: 20 },
+            4: { halign: 'center', cellWidth: 25 }
+        }
+    });
+
+    const photos = data.filter(row =>
+        getVal(row, ['FOTO', 'FOTO_KEGIATAN', 'DOKUMENTASI'])
+    );
+
+    if (photos.length > 0) {
+        doc.addPage();
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.text('LAMPIRAN DOKUMENTASI LITERASI PAGI', pageWidth / 2, margin + 8, { align: 'center' });
+
+        let imageCount = 0;
+        const cols = 2;
+        const cellWidth = 88;
+        const cellHeight = 72;
+        const gapX = 5;
+        const gapY = 8;
+        const startY = margin + 16;
+        const startX = margin;
+
+        for (const row of photos) {
+            let photo = getVal(row, ['FOTO_KEGIATAN', 'FOTO', 'DOKUMENTASI']);
+            if (!photo) continue;
+
+            if (!photo.startsWith('data:image')) {
+                const fileId = getVal(row, ['FILE_ID_DRIVE', 'FILE_ID']);
+                if (fileId && !String(fileId).includes('LOCAL_CACHE')) {
+                    photo = `https://lh3.googleusercontent.com/d/${String(fileId).trim()}=w600`;
+                } else {
+                    const match = String(photo).match(/[-\w]{25,}/);
+                    if (match) photo = `https://lh3.googleusercontent.com/d/${match[0]}=w600`;
+                }
+            }
+
+            if (!photo) continue;
+            let base64Photo = photo.startsWith('data:image')
+                ? photo
+                : await fetchImageAsBase64(photo);
+            if (!base64Photo) continue;
+
+            if (imageCount > 0 && imageCount % 6 === 0) {
+                doc.addPage();
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                doc.text('LAMPIRAN DOKUMENTASI LITERASI PAGI (LANJUTAN)', pageWidth / 2, margin + 8, { align: 'center' });
+            }
+
+            const positionOnPage = imageCount % 6;
+            const col = positionOnPage % cols;
+            const rowIndex = Math.floor(positionOnPage / cols);
+            const x = startX + col * (cellWidth + gapX);
+            const y = startY + rowIndex * (cellHeight + gapY);
+            const tanggal = getVal(row, ['TANGGAL', 'Tanggal']) || '-';
+            const kelas = getVal(row, ['KELAS', 'Kelas']) || '-';
+            const ruang = getVal(row, ['RUANG', 'Ruang']) || '-';
+
+            doc.setDrawColor(200, 200, 200);
+            doc.roundedRect(x, y, cellWidth, cellHeight, 2, 2, 'S');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7);
+            doc.text(`${tanggal} | ${kelas} | ${ruang}`, x + 3, y + 5);
+            try {
+                doc.addImage(base64Photo, x + 3, y + 8, cellWidth - 6, cellHeight - 11);
+            } catch (error) {
+                console.warn('Foto Literasi gagal ditambahkan ke PDF:', error);
+            }
+            imageCount++;
+        }
+    }
+
+    const kepsekName = getDokValue('KEPALA SEKOLAH', 'NAMA') || getDokValue('KEPALA SEKOLAH', 'Nama') || '........................';
+    const kepsekNip = getDokValue('KEPALA SEKOLAH', 'NIP') || '-';
+    const finalY = doc.internal.pageSize.getHeight() - 32;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Mengetahui,', margin + 20, finalY - 12, { align: 'center' });
+    doc.text('Kepala Sekolah', margin + 20, finalY - 8, { align: 'center' });
+    doc.text(kepsekName, margin + 20, finalY + 8, { align: 'center' });
+    doc.text(`NIP. ${kepsekNip}`, margin + 20, finalY + 12, { align: 'center' });
+
+    const safeName = String(teacherName || 'GURU').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+    doc.save(`REKAP_LITERASI_${monthName}_${yearName}_${safeName}_${now.getTime()}.pdf`);
+}
+
+window.generateLiterasiPDF = generateLiterasiPDF;
